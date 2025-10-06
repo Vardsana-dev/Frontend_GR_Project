@@ -2,7 +2,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "CSC Report",
+  title: "CSC PO Department",
 };
 
 export default function RootLayout({ children }) {

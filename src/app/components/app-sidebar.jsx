@@ -36,47 +36,50 @@ import {
 } from "@/components";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import cscLogo from "../../../public/csc-items/1757302046465.png"
 
 const items = [
   {
-    title: "Dashboard",
+    title: "ໜ້າຫຼັກ",
     url: "/dashboard",
     icon: LayoutDashboard,
   },
+  // {
+  //   title: "ສັ່ງຊື້ທັງໝົດ",
+  //   url: "/all-po",
+  //   icon: BookOpen,
+  // },
   {
-    title: "ປະກາດສັ່ງຊື້ທັງໝົດ (All PO)",
-    url: "/all-po",
-    icon: BookOpen,
-  },
-  {
-    title: "ສິນຄ້າທັງໝົດ (All Products)",
+    title: "ສິນຄ້າ",
     url: "/all-products",
     icon: Package,
   },
   {
-    title: "Report",
-    icon: BookAudio,
-    items: [
-      {
-        title: "Sales Report",
-        url: "/reports/sales",
-      },
-      {
-        title: "Product Report",
-        url: "/reports/products",
-      },
-      {
-        title: "Customer Report",
-        url: "/reports/customers",
-      },
-    ],
+    title: "ສັ່ງຊື້",
+    url: "/all-pr",
+    icon: Package,
   },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  // Get username from user data
+  const username = user?.user?.USERNAME || user?.user?.username || 'ຜູ້ໃຊ້';
+  const handleLogout = () => {
+    // console.log('🚪 Logging out...');
+    logout();
+  };
+
+  const handleAccountClick = () => {
+    // console.log('👤 Opening user account page...');
+    router.push('/user');
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -85,7 +88,16 @@ export function AppSidebar() {
           {state === "collapsed" ? (
             <SidebarTrigger className="mb-1 ml-[2.5px]" />
           ) : (
-            <Image src="/csc-items/1757302046465.png" alt="CSC Report" width={100} height={100} />
+            <div className="flex items-center gap-2 ml-2">
+              <Image 
+                src={cscLogo}
+                alt="CSC Report" 
+                width={70} 
+                height={70}
+                className="object-contain"
+                priority
+              />
+            </div>
           )}
           {state !== "collapsed" && <SidebarTrigger />}
         </div>
@@ -154,7 +166,7 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton>
                   <User2 />
-                  <span>Username</span>
+                  <span className="truncate">{username}</span>
                   <ChevronUp className="ml-auto" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
@@ -163,13 +175,13 @@ export function AppSidebar() {
                 className="w-[--radix-popper-anchor-width] min-w-56"
                 sideOffset={4}
               >
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleAccountClick} className="text-gray-500">
                   <User2 />
-                  <span>Account</span>
+                  <span>ບັນຊີ</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="text-gray-500">
                   <LogOut />
-                  <span>Sign out</span>
+                  <span>ອອກຈາກລະບົບ</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
