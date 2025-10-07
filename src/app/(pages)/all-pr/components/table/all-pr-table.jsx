@@ -95,7 +95,11 @@ const AllPrTable = ({
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
           <div className="text-red-500 text-xl mb-2">⚠️</div>
-          <div className="text-lg text-red-500">ເກີດຂໍ້ຜິດພາດ: {error}</div>
+          <div>
+            <p className="text-lg text-red-500">ເກີດຂໍ້ຜິດພາດ</p>
+            <p className="text-sm text-red-500 mt-2">ກາລຸນາຕິດຕໍ່ຝ່າຍດູແລລະບົບ ເພື່ອແກ້ໄຂບັນຫາ</p>
+            {/* <p className="text-sm text-red-500">{error}</p> */}
+          </div>
         </div>
       </div>
     </div>

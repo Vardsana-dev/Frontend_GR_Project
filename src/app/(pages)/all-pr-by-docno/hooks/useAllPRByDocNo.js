@@ -275,7 +275,7 @@ export const useAllPOByDocNo = (docNo) => {
         XLSX.utils.book_append_sheet(wb, ws, 'ສິນຄ້າສັ່ງຊື້')
 
         // สร้างชื่อไฟล์
-        const fileName = `ລາຍການສັ່ງຊື້ຈາກລະຫັດ_${docNo}_${new Date().toISOString().split('T')[0]}.xlsx`
+        const fileName = `${docNo}_${new Date().toISOString().split('T')[0]}.xlsx`
 
         // Export ไฟล์
         XLSX.writeFile(wb, fileName)

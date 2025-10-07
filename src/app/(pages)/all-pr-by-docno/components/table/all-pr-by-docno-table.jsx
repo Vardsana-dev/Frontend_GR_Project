@@ -22,7 +22,7 @@ const AllPrByDocNoTable = ({
   isClient,
   onPageChange,
 }) => {
-    const tableHeaders = [
+  const tableHeaders = [
     { key: "ລຳດັບ" },
     { key: "ລະຫັດສິນຄ້າ" },
     { key: "ຊື່ສິນຄ້າ" },
@@ -65,7 +65,7 @@ const AllPrByDocNoTable = ({
     { key: "ວັນທີສັ່ງຊື້ 11" },
     { key: "ຈຳນວນສັ່ງຊື້ 12" },
     { key: "ລາຄາສັ່ງຊື້ 12" },
-    { key: "ວັນທີສັ່ງຊື້ 12" }
+    { key: "ວັນທີສັ່ງຊື້ 12" },
   ];
 
   // ฟังก์ชันสำหรับจัดรูปแบบวันที่
@@ -123,7 +123,13 @@ const AllPrByDocNoTable = ({
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
           <div className="text-red-500 text-xl mb-2">⚠️</div>
-          <div className="text-lg text-red-500">ເກີດຂໍ້ຜິດພາດ: {error}</div>
+          <div>
+            <p className="text-lg text-red-500">ເກີດຂໍ້ຜິດພາດ</p>
+            <p className="text-sm text-red-500 mt-2">
+              ກາລຸນາຕິດຕໍ່ຝ່າຍດູແລລະບົບ ເພື່ອແກ້ໄຂບັນຫາ
+            </p>
+            {/* <p className="text-sm text-red-500">{error}</p> */}
+          </div>
         </div>
       </div>
     </div>
@@ -159,7 +165,11 @@ const AllPrByDocNoTable = ({
       }
 
       // จัดรูปแบบเงิน
-      if (key.includes("price") || key.includes("pricetop") || key === "UNITPRICE") {
+      if (
+        key.includes("price") ||
+        key.includes("pricetop") ||
+        key === "UNITPRICE"
+      ) {
         return formatCurrency(value);
       }
 
