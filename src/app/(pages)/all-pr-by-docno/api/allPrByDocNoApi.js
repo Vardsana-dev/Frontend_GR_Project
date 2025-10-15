@@ -33,7 +33,7 @@ const extractPRByDocNoData = (responseData) => {
     return paths.find(data => Array.isArray(data)) || []
 }
 
-export const getAllPOByDocNo = async (params = {}) => {
+export const getAllPrByDocNo = async (params = {}) => {
     try {
         const queryParams = {
             page: params.page || 1,
@@ -55,7 +55,7 @@ export const getAllPOByDocNo = async (params = {}) => {
         }
         
     } catch (error) {
-        console.error('❌ Error fetching PO by DocNo:', error)
+        console.error('❌ Error fetching Pr by DocNo:', error)
         
         const errorMessage = error.response?.data?.message || 
                            error.message || 

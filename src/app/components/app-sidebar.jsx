@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   LayoutDashboard,
   BookAudio,
@@ -69,6 +70,12 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const router = useRouter();
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Get username from user data
   const username = user?.user?.USERNAME || user?.user?.username || 'ຜູ້ໃຊ້';
   const handleLogout = () => {
@@ -164,11 +171,13 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <User2 />
-                  <span className="truncate">{username}</span>
-                  <ChevronUp className="ml-auto" />
-                </SidebarMenuButton>
+                {isClient && (
+                  <SidebarMenuButton>
+                    <User2 />
+                    <span className="truncate">{username}</span>
+                    <ChevronUp className="ml-auto" />
+                  </SidebarMenuButton>
+                )}
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 side="top"

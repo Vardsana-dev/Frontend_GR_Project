@@ -20,6 +20,7 @@ const AllPrByDocNoTable = ({
   totalPages,
   totalItems,
   isClient,
+  hasLoaded,
   onPageChange,
 }) => {
   const tableHeaders = [
@@ -226,8 +227,7 @@ const AllPrByDocNoTable = ({
   };
 
   // Render states
-  if (!isClient) return <LoadingState />;
-  if (loading) return <ClientLoadingState />;
+  if (!isClient || loading || !hasLoaded) return <ClientLoadingState />;
   if (error) return <ErrorState />;
 
   return (

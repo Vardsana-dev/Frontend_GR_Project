@@ -22,6 +22,7 @@ function AllPoByDocNoContent() {
         totalPages,
         totalItems,
         isClient,
+        hasLoaded,
         handlePageChange,
         handleLimitChange,
         handleSearch,
@@ -70,6 +71,7 @@ function AllPoByDocNoContent() {
                     totalPages={totalPages}
                     totalItems={totalItems}
                     isClient={isClient}
+                    hasLoaded={hasLoaded}
                     onPageChange={handlePageChange}
                 />
             </div>

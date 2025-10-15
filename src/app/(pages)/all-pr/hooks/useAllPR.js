@@ -1,64 +1,67 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { getAllPO } from '../api/allPrApi'
+import { getAllPR } from '../api/allPrApi'
 import { useAuth } from '@/hooks/useAuth'
 
-export const useAllPO = () => {
-    const [allPO, setAllPO] = useState([])
+export const useAllPR = () => {
+    const [allPR, setAllPR] = useState([])
     const [loading, setLoading] = useState(false)
+    const [hasLoaded, setHasLoaded] = useState(false)
     const [error, setError] = useState(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [limit, setLimit] = useState(100)
     const [searchTerm, setSearchTerm] = useState('')
+    const [department, setDepartment] = useState('') // เพิ่ม state สำหรับ department
     const [isClient, setIsClient] = useState(false)
     const { user } = useAuth()
 
     useEffect(() => setIsClient(true), [])
 
-    const fetchPO = useCallback(async (params = {}) => {
+    const fetchPR = useCallback(async (params = {}) => {
         setLoading(true)
         setError(null)
+        setAllPR([]) // Clear previous data when starting new fetch
 
         try {
-            const result = await getAllPO({
+            const result = await getAllPR({
                 page: 1,
                 limit: params.limit || limit,
-                search: params.search || searchTerm
+                search: params.search || searchTerm,
+                departments: params.department || department // แก้ไขเป็น departments
             })
 
             if (result.success) {
-                setAllPO(result.data)
+                setAllPR(result.data)
             } else {
                 setError(result.error)
-                setAllPO([])
+                setAllPR([])
             }
         } catch (err) {
             setError(err.message)
-            setAllPO([])
+            setAllPR([])
         } finally {
             setLoading(false)
+            setHasLoaded(true)
         }
-    }, [limit, searchTerm])
+    }, [limit, searchTerm, department]) // เพิ่ม department ใน dependency
 
-    const filteredPO = useMemo(() => {
-        if (!isClient || !searchTerm.trim()) return allPO
+    const filteredPR = useMemo(() => {
+        if (!isClient || !searchTerm.trim()) return allPR
 
         const searchLower = searchTerm.toLowerCase()
 
-        // ฟังก์ชันสำหรับแปลงวันที่เป็นรูปแบบที่ค้นหาได้
         const formatDateForSearch = (dateString) => {
             if (!dateString) return ""
             try {
                 const date = new Date(dateString)
                 if (isNaN(date.getTime())) return ""
 
-                // แปลงเป็นรูปแบบต่างๆ ที่อาจใช้ค้นหา
                 const formats = [
-                    date.toLocaleDateString("lo-LA", { year: "numeric", month: "2-digit", day: "2-digit" }), // dd/mm/yyyy
-                    date.toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" }), // mm/dd/yyyy
-                    date.toISOString().split('T')[0], // yyyy-mm-dd
-                    date.toLocaleDateString("lo-LA", { year: "numeric", month: "numeric", day: "numeric" }), // d/m/yyyy
-                    date.toLocaleDateString("lo-LA", { year: "numeric", month: "2-digit", day: "numeric" }), // d/mm/yyyy
-                    date.toLocaleDateString("lo-LA", { year: "numeric", month: "numeric", day: "2-digit" }), // dd/m/yyyy
+                    date.toLocaleDateString("lo-LA", { year: "numeric", month: "2-digit", day: "2-digit" }),
+                    date.toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" }),
+                    date.toISOString().split('T')[0],
+                    date.toLocaleDateString("lo-LA", { year: "numeric", month: "numeric", day: "numeric" }),
+                    date.toLocaleDateString("lo-LA", { year: "numeric", month: "2-digit", day: "numeric" }),
+                    date.toLocaleDateString("lo-LA", { year: "numeric", month: "numeric", day: "2-digit" }),
                 ]
                 return formats.join(" ")
             } catch (error) {
@@ -66,19 +69,17 @@ export const useAllPO = () => {
             }
         }
 
-        return allPO.filter(po => {
+        return allPR.filter(pr => {
             const searchableFields = [
-                // ข้อมูลพื้นฐาน PR
-                po.DOCNO,
-                po.WAREHOUSE,
-                po.DOCDATE,
-                po.WANTDATE,
+                pr.DOCNO,
+                pr.WAREHOUSE,
+                pr.DOCDATE,
+                pr.WANTDATE,
             ]
 
-            // เพิ่มการค้นหาวันที่ในรูปแบบต่างๆ
             const dateFields = [
-                po.DOCDATE,
-                po.WANTDATE
+                pr.DOCDATE,
+                pr.WANTDATE
             ]
 
             const formattedDates = dateFields.map(date => formatDateForSearch(date)).join(" ")
@@ -87,24 +88,24 @@ export const useAllPO = () => {
                 field?.toString().toLowerCase().includes(searchLower)
             ) || formattedDates.toLowerCase().includes(searchLower)
         })
-    }, [allPO, searchTerm, isClient])
+    }, [allPR, searchTerm, isClient])
 
-    const paginatedPO = useMemo(() => {
+    const paginatedPR = useMemo(() => {
         if (!isClient) return []
         const startIndex = (currentPage - 1) * 10
-        return filteredPO.slice(startIndex, startIndex + 10)
-    }, [filteredPO, currentPage, isClient])
+        return filteredPR.slice(startIndex, startIndex + 10)
+    }, [filteredPR, currentPage, isClient])
 
     const totalPages = useMemo(() => {
         if (!isClient) return 1
-        return Math.ceil(filteredPO.length / 10)
-    }, [filteredPO.length, isClient])
+        return Math.ceil(filteredPR.length / 10)
+    }, [filteredPR.length, isClient])
 
     useEffect(() => {
         if (user && isClient) {
-            fetchPO()
+            fetchPR()
         }
-    }, [user, isClient, fetchPO])
+    }, [user, isClient, fetchPR])
 
     const handlePageChange = (page) => setCurrentPage(page)
     const handleLimitChange = (newLimit) => setLimit(parseInt(newLimit))
@@ -112,27 +113,39 @@ export const useAllPO = () => {
         setSearchTerm(term)
         setCurrentPage(1)
     }
-    const handleApplyFilter = async () => {
+    const handleDepartmentChange = (dept) => { // เพิ่มฟังก์ชันสำหรับเปลี่ยน department
+        setDepartment(dept)
         setCurrentPage(1)
-        await fetchPO({ limit, search: searchTerm })
+    }
+    const handleApplyFilter = async () => {
+        setCurrentPage(1);
+        setLoading(true); // Set loading immediately when filter is applied
+        try {
+            await fetchPR({ limit, search: searchTerm, department });
+        } finally {
+            setLoading(false); // Ensure loading is false only after fetch completes
+        }
     }
 
     return {
-        po: paginatedPO,
-        allPO,
-        filteredPO,
+        pr: paginatedPR,
+        allPR,
+        filteredPR,
         loading,
         error,
         currentPage,
         limit,
         searchTerm,
+        department, // เพิ่ม department ใน return
         totalPages,
-        totalItems: filteredPO.length,
+        totalItems: filteredPR.length,
         isClient,
-        refetch: fetchPO,
+        hasLoaded,
+        refetch: fetchPR,
         handlePageChange,
         handleLimitChange,
         handleSearch,
+        handleDepartmentChange, // เพิ่มฟังก์ชันใน return
         handleApplyFilter,
         currentOffice: user?.selectedOffice,
         apiUrl: user?.selectedApiUrl

@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react";
 import {
   Input,
@@ -22,6 +24,7 @@ const AllPoFilter = ({
   const [tempLimit, setTempLimit] = useState(limit);
   const [tempLevel, setTempLevel] = useState(level);
   const [tempLevelInput, setTempLevelInput] = useState(level.toString());
+  const [loading, setLoading] = useState(false);
 
   // Update temp values when props change
   useEffect(() => {
@@ -31,9 +34,11 @@ const AllPoFilter = ({
   }, [limit, level]);
 
   const handleApplyFilter = () => {
+    setLoading(true);
     onLimitChange(tempLimit.toString());
     onLevelChange(tempLevel.toString());
     onApplyFilter();
+    setLoading(false);
   };
 
   return (
@@ -98,26 +103,6 @@ const AllPoFilter = ({
           </Select>
         </div>
 
-        {/* <div className="md:w-[100px] hidden md:block">
-          <Label>ລະດັບ</Label>
-          <Select
-            value={tempLevel.toString()}
-            onValueChange={(value) => setTempLevel(parseInt(value))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="ເລືອກລະດັບ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">ທັງໝົດ</SelectItem>
-              <SelectItem value="1">ລະດັບ 1</SelectItem>
-              <SelectItem value="2">ລະດັບ 2</SelectItem>
-              <SelectItem value="3">ລະດັບ 3</SelectItem>
-              <SelectItem value="4">ລະດັບ 4</SelectItem>
-              <SelectItem value="5">ລະດັບ 5</SelectItem>
-            </SelectContent>
-          </Select>
-        </div> */}
-
         <div className="md:w-[100px] hidden md:block">
           <Label>ລະດັບ</Label>
           <Input
@@ -139,8 +124,16 @@ const AllPoFilter = ({
         <Button
           className="bg-amber-400 hover:bg-amber-500 hidden md:block"
           onClick={handleApplyFilter}
+          disabled={loading} // Disable button while loading
         >
-          ລາຍງານ
+          {loading ? (
+            <span className="flex items-center">
+              <span className="spinner-border spinner-border-sm mr-2"></span>
+              ກຳລັງໂຫຼດ...
+            </span>
+          ) : (
+            "ລາຍງານ"
+          )}
         </Button>
       </div>
       <div className="md:w-sm">
@@ -156,8 +149,16 @@ const AllPoFilter = ({
       <Button
         className="bg-amber-400 hover:bg-amber-500 md:hidden"
         onClick={handleApplyFilter}
+        disabled={loading} // Disable button while loading
       >
-        ລາຍງານ
+        {loading ? (
+          <span className="flex items-center">
+            <span className="spinner-border spinner-border-sm mr-2"></span>
+            ກຳລັງໂຫຼດ...
+          </span>
+        ) : (
+          "ລາຍງານ"
+        )}
       </Button>
     </div>
   );

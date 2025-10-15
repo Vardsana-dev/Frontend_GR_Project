@@ -1,26 +1,33 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { Title, SubTitle } from '@/components'
-import AllPrTable from './components/table/all-pr-table'
-import AllPoFilter from './components/filter/all-pr-filter'
-import { useAllPO } from './hooks/useAllPR'
+import AllPrFilter from './components/filter/all-pr-filter'
+import { useAllPR } from './hooks/useAllPR'
+import { usePRDepartment } from '../pr-department/hooks/usePRDepartment'
 
-export default function AllPOPage() {
+const AllPrTable = dynamic(() => import('./components/table/all-pr-table'), { ssr: false })
+
+export default function AllPRPage() {
     const {
-        po,
+        pr,
+        allPR,
         loading,
         error,
         currentPage,
         limit,
         searchTerm,
+        department,
         totalPages,
         totalItems,
         isClient,
+        hasLoaded,
         handlePageChange,
         handleLimitChange,
         handleSearch,
+        handleDepartmentChange,
         handleApplyFilter
-    } = useAllPO()
+    } = useAllPR()
 
     return (
         <div className="w-full max-w-full overflow-hidden">
@@ -32,24 +39,29 @@ export default function AllPOPage() {
             <hr className="hidden md:block my-4" />
 
             <div className="w-full max-w-full">
-                <AllPoFilter 
+                <AllPrFilter
                     limit={limit}
                     searchTerm={searchTerm}
+                    department={department}
                     onLimitChange={handleLimitChange}
                     onSearchChange={handleSearch}
+                    onDepartmentChange={handleDepartmentChange}
                     onApplyFilter={handleApplyFilter}
+                    usePRDepartment={usePRDepartment}
                 />
             </div>
 
             <div className="w-full max-w-full mt-4">
                 <AllPrTable 
-                    po={po}
+                    pr={loading ? [] : pr} // Show empty data while loading
+                    allPR={loading ? [] : allPR} // Clear table data while loading
                     loading={loading}
                     error={error}
                     currentPage={currentPage}
                     totalPages={totalPages}
                     totalItems={totalItems}
                     isClient={isClient}
+                    hasLoaded={hasLoaded}
                     onPageChange={handlePageChange}
                 />
             </div>

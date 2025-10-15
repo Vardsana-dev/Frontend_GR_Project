@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx'
 export const useAllPOByDocNo = (docNo) => {
     const [allPOByDocNo, setAllPOByDocNo] = useState([])
     const [loading, setLoading] = useState(false)
+    const [hasLoaded, setHasLoaded] = useState(false)
     const [error, setError] = useState(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [limit, setLimit] = useState(100)
@@ -20,6 +21,7 @@ export const useAllPOByDocNo = (docNo) => {
         
         setLoading(true)
         setError(null)
+        setAllPOByDocNo([]) // Clear previous data when starting new fetch
         
         try {
             const result = await getAllPOByDocNo({
@@ -40,6 +42,7 @@ export const useAllPOByDocNo = (docNo) => {
             setAllPOByDocNo([])
         } finally {
             setLoading(false)
+            setHasLoaded(true)
         }
     }, [docNo, limit, searchTerm])
 
@@ -175,6 +178,7 @@ export const useAllPOByDocNo = (docNo) => {
     }
     const handleApplyFilter = async () => {
         setCurrentPage(1)
+        setLoading(true) // Set loading immediately when filter is applied
         await fetchPOByDocNo({ limit, search: searchTerm })
     }
 
@@ -318,6 +322,7 @@ export const useAllPOByDocNo = (docNo) => {
         totalPages,
         totalItems: filteredPOByDocNo.length,
         isClient,
+        hasLoaded,
         refetch: fetchPOByDocNo,
         handlePageChange,
         handleLimitChange,

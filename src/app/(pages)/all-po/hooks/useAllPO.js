@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 export const useAllPO = () => {
     const [allPO, setAllPO] = useState([])
     const [loading, setLoading] = useState(false)
+    const [hasLoaded, setHasLoaded] = useState(false)
     const [error, setError] = useState(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [limit, setLimit] = useState(100)
@@ -18,6 +19,7 @@ export const useAllPO = () => {
     const fetchPO = useCallback(async (params = {}) => {
         setLoading(true)
         setError(null)
+        setAllPO([]) // Clear previous data when starting new fetch
         
         try {
             const result = await getAllPO({
@@ -38,6 +40,7 @@ export const useAllPO = () => {
             setAllPO([])
         } finally {
             setLoading(false)
+            setHasLoaded(true)
         }
     }, [limit, level, searchTerm])
 
@@ -232,15 +235,25 @@ export const useAllPO = () => {
     }, [user, isClient, fetchPO])
 
     const handlePageChange = (page) => setCurrentPage(page)
-    const handleLimitChange = (newLimit) => setLimit(parseInt(newLimit))
+    const handleLimitChange = (newLimit) => {
+        const parsedLimit = parseInt(newLimit);
+        if (parsedLimit !== limit) {
+            setLimit(parsedLimit);
+            fetchPO({ limit: parsedLimit, level, search: searchTerm });
+        }
+    };
     const handleLevelChange = (newLevel) => setLevel(parseInt(newLevel))
     const handleSearch = (term) => {
         setSearchTerm(term)
         setCurrentPage(1)
     }
     const handleApplyFilter = async () => {
-        setCurrentPage(1)
-        await fetchPO({ limit, level, search: searchTerm })
+        setLoading(true);
+        try {
+            await fetchPO({ limit, level, search: searchTerm });
+        } finally {
+            setLoading(false); // Ensure loading is false only after fetch completes
+        }
     }
 
     return {
@@ -256,6 +269,7 @@ export const useAllPO = () => {
         totalPages,
         totalItems: filteredPO.length,
         isClient,
+        hasLoaded,
         refetch: fetchPO,
         handlePageChange,
         handleLimitChange,

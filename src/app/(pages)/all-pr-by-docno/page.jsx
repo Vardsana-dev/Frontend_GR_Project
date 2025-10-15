@@ -4,10 +4,10 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Title, SubTitle, LoadingSpinner } from '@/components'
 import AllPrByDocNoTable from './components/table/all-pr-by-docno-table'
-import AllPoByDocNoFilter from './components/filter/all-pr-by-docno-filter'
-import { useAllPOByDocNo } from './hooks/useAllPRByDocNo'
+import AllPrByDocNoFilter from './components/filter/all-pr-by-docno-filter'
+import { useAllPrByDocNo } from './hooks/useAllPRByDocNo'
 
-function AllPoByDocNoContent() {
+function AllPrByDocNoContent() {
     const searchParams = useSearchParams()
     const [docNo, setDocNo] = useState('')
     const [isInitialized, setIsInitialized] = useState(false)
@@ -22,12 +22,13 @@ function AllPoByDocNoContent() {
         totalPages,
         totalItems,
         isClient,
+        hasLoaded,
         handlePageChange,
         handleLimitChange,
         handleSearch,
         handleApplyFilter,
         exportToExcel
-    } = useAllPOByDocNo(docNo)
+    } = useAllPrByDocNo(docNo)
 
     useEffect(() => {
         if (!isInitialized) {
@@ -51,7 +52,7 @@ function AllPoByDocNoContent() {
             <hr className="hidden md:block my-4" />
 
             <div className="w-full max-w-full">
-                <AllPoByDocNoFilter 
+                <AllPrByDocNoFilter 
                     limit={limit}
                     searchTerm={searchTerm}
                     onLimitChange={handleLimitChange}
@@ -70,6 +71,7 @@ function AllPoByDocNoContent() {
                     totalPages={totalPages}
                     totalItems={totalItems}
                     isClient={isClient}
+                    hasLoaded={hasLoaded}
                     onPageChange={handlePageChange}
                 />
             </div>
@@ -77,10 +79,10 @@ function AllPoByDocNoContent() {
     )
 }
 
-export default function AllPoByDocNoPage() {
+export default function AllPrByDocNoPage() {
     return (
         <Suspense fallback={<LoadingSpinner />}>
-            <AllPoByDocNoContent />
+            <AllPrByDocNoContent />
         </Suspense>
     )
 }

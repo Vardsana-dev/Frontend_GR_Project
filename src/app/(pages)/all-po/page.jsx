@@ -17,6 +17,7 @@ export default function AllPOPage() {
         totalPages,
         totalItems,
         isClient,
+        hasLoaded,
         handlePageChange,
         handleLimitChange,
         handleLevelChange,
@@ -47,13 +48,14 @@ export default function AllPOPage() {
 
             <div className="w-full max-w-full mt-4">
                 <AllPoTable 
-                    po={po}
+                    po={loading ? [] : po} // Show empty data while loading
                     loading={loading}
                     error={error}
                     currentPage={currentPage}
                     totalPages={totalPages}
                     totalItems={totalItems}
                     isClient={isClient}
+                    hasLoaded={hasLoaded}
                     onPageChange={handlePageChange}
                 />
             </div>

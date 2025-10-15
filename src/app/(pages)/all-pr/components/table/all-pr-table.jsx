@@ -15,13 +15,15 @@ import {
 import AllPrPagination from "./all-pr-pagination";
 
 const AllPrTable = ({
-  po,
+  pr,
+  allPR,
   loading,
   error,
   currentPage,
   totalPages,
   totalItems,
   isClient,
+  hasLoaded,
   onPageChange,
 }) => {
   const router = useRouter();
@@ -116,7 +118,7 @@ const AllPrTable = ({
   const NoDataState = () => (
     <TableRow>
       <TableCell colSpan={tableHeaders.length} className="text-center py-8">
-        ບໍ່ພົບຂໍ້ມູນຂໍສິນຄ້າ
+        ບໍ່ມີຂໍ້ມູນ
       </TableCell>
     </TableRow>
   );
@@ -176,16 +178,15 @@ const AllPrTable = ({
   };
 
   // Render states
-  if (!isClient) return <LoadingState />;
-  if (loading) return <ClientLoadingState />;
+  if (!isClient || loading || !hasLoaded) return <ClientLoadingState />;
   if (error) return <ErrorState />;
 
   return (
     <div className="w-full max-w-full overflow-hidden">
       <TableWrapper>
-        {po.length > 0 ? (
-          po.map((poItem, index) => (
-            <PRRow key={`${poItem.DOCNO}-${index}`} prItem={poItem} index={index} />
+        {pr.length > 0 ? (
+          pr.map((prItem, index) => (
+            <PRRow key={`${prItem.DOCNO}-${index}`} prItem={prItem} index={index} />
           ))
         ) : (
           <NoDataState />

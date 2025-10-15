@@ -6,7 +6,7 @@ const ALLPR_ENDPOINT = process.env.ALLPR_ENDPOINT || '/api/pr/ALLPR'
 const createApiInstance = () => {
     const userData = getStoredUserData()
     const token = getAuthToken()
-    
+     
     if (!userData || !token) {
         throw new Error('User not authenticated')
     }
@@ -20,7 +20,7 @@ const createApiInstance = () => {
     })
 }
 
-const extractPOData = (responseData) => {
+const extractPRData = (responseData) => {
     const paths = [
         responseData?.message?.data,
         responseData?.message?.rows,
@@ -33,29 +33,30 @@ const extractPOData = (responseData) => {
     return paths.find(data => Array.isArray(data)) || []
 }
 
-export const getAllPO = async (params = {}) => {
+export const getAllPR = async (params = {}) => {
     try {
         const queryParams = {
             page: params.page || 1,
             limit: params.limit || 100,
-            search: params.search || ''
+            departments: params.departments || ''
         }
         
         const api = createApiInstance()
         const response = await api.get(ALLPR_ENDPOINT, { params: queryParams })
 
-        const prData = extractPOData(response.data)
+        const prData = extractPRData(response.data)
 
         return {
             success: true,
             data: prData,
             total: response.data?.message?.count || response.data?.total || prData.length,
             page: response.data?.page || queryParams.page,
-            limit: response.data?.limit || queryParams.limit
+            limit: response.data?.limit || queryParams.limit,
+            departments: response.data?.departments || queryParams.departments
         }
         
     } catch (error) {
-        console.error('❌ Error fetching PO:', error)
+        console.error('❌ Error fetching PR:', error)
         
         const errorMessage = error.response?.data?.message || 
                            error.message || 

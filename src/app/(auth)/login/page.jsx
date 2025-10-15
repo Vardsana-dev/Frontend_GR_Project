@@ -28,6 +28,7 @@ import { setAuthCookie } from '@/lib/auth'
 const LoginPage = () => {
     const router = useRouter()
     const [showPassword, setShowPassword] = useState(false)
+    const [isClient, setIsClient] = useState(false)
     const [formData, setFormData] = useState({
         office: '',
         username: '',
@@ -36,6 +37,10 @@ const LoginPage = () => {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [showErrorDialog, setShowErrorDialog] = useState(false)
+
+    React.useEffect(() => {
+        setIsClient(true)
+    }, [])
 
     // API endpoints mapping
     const apiEndpoints = {
@@ -214,19 +219,21 @@ const LoginPage = () => {
                             {/* Office Selection */}
                             <div>
                                 <Label className="mb-2 block">ສາຂາຜູ້ໃຊ້</Label>
-                                <Select 
-                                    value={formData.office} 
-                                    onValueChange={(value) => handleInputChange('office', value)}
-                                >
-                                    <SelectTrigger className="w-full h-10">
-                                        <SelectValue placeholder="ເລືອກສາຂາ" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="VTE_OFFICE">ສາຂາວຽງຈັນ</SelectItem>
-                                        <SelectItem value="PAKZUN_OFFICE">ສາຂາປາກຊັນ</SelectItem>
-                                        <SelectItem value="PAKZE_OFFICE">ສາຂາປາກເຊ</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                {isClient && (
+                                    <Select 
+                                        value={formData.office} 
+                                        onValueChange={(value) => handleInputChange('office', value)}
+                                    >
+                                        <SelectTrigger className="w-full h-10">
+                                            <SelectValue placeholder="ເລືອກສາຂາ" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="VTE_OFFICE">ສາຂາວຽງຈັນ</SelectItem>
+                                            <SelectItem value="PAKZUN_OFFICE">ສາຂາປາກຊັນ</SelectItem>
+                                            <SelectItem value="PAKZE_OFFICE">ສາຂາປາກເຊ</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
 
                             {/* Username Field */}

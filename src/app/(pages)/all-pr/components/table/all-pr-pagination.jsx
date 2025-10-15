@@ -8,7 +8,7 @@ import {
     PaginationNext
 } from '@/components'
 
-const AllPoPagination = ({
+const AllPrPagination = ({
     currentPage,
     totalPages,
     totalItems,
@@ -96,4 +96,4 @@ const AllPoPagination = ({
     )
 }
 
-export default AllPoPagination
+export default AllPrPagination

@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { getAllPOByDocNo } from '../api/allPrByDocNoApi'
+import { getAllPrByDocNo } from '../api/allPrByDocNoApi'
 import { useAuth } from '@/hooks/useAuth'
 import * as XLSX from 'xlsx'
 
-export const useAllPOByDocNo = (docNo) => {
-    const [allPOByDocNo, setAllPOByDocNo] = useState([])
+export const useAllPrByDocNo = (docNo) => {
+    const [allPrByDocNo, setAllPrByDocNo] = useState([])
     const [loading, setLoading] = useState(false)
+    const [hasLoaded, setHasLoaded] = useState(false)
     const [error, setError] = useState(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [limit, setLimit] = useState(100)
@@ -15,14 +16,15 @@ export const useAllPOByDocNo = (docNo) => {
 
     useEffect(() => setIsClient(true), [])
 
-    const fetchPOByDocNo = useCallback(async (params = {}) => {
+    const fetchPrByDocNo = useCallback(async (params = {}) => {
         if (!docNo) return;
         
         setLoading(true)
         setError(null)
+        setAllPrByDocNo([]) // Clear previous data when starting new fetch
         
         try {
-            const result = await getAllPOByDocNo({
+            const result = await getAllPrByDocNo({
                 page: 1,
                 limit: params.limit || limit,
                 docNo: docNo,
@@ -30,22 +32,23 @@ export const useAllPOByDocNo = (docNo) => {
             })
             
             if (result.success) {
-                setAllPOByDocNo(result.data)
+                setAllPrByDocNo(result.data)
             } else {
                 setError(result.error)
-                setAllPOByDocNo([])
+                setAllPrByDocNo([])
             }
         } catch (err) {
             setError(err.message)
-            setAllPOByDocNo([])
+            setAllPrByDocNo([])
         } finally {
             setLoading(false)
+            setHasLoaded(true)
         }
     }, [docNo, limit, searchTerm])
 
-    const filteredPOByDocNo = useMemo(() => {
-        if (!isClient || !searchTerm.trim()) return allPOByDocNo
-        
+    const filteredPrByDocNo = useMemo(() => {
+        if (!isClient || !searchTerm.trim()) return allPrByDocNo
+
         const searchLower = searchTerm.toLowerCase()
         
         // ฟังก์ชันสำหรับแปลงวันที่เป็นรูปแบบที่ค้นหาได้
@@ -70,7 +73,7 @@ export const useAllPOByDocNo = (docNo) => {
             }
         }
         
-        return allPOByDocNo.filter(po => {
+        return allPrByDocNo.filter(po => {
             const searchableFields = [
                 // ข้อมูลสินค้า
                 po.PRODUCTCODE || po.productcode,
@@ -141,24 +144,24 @@ export const useAllPOByDocNo = (docNo) => {
                 field?.toString().toLowerCase().includes(searchLower)
             ) || formattedDates.toLowerCase().includes(searchLower)
         })
-    }, [allPOByDocNo, searchTerm, isClient])
+    }, [allPrByDocNo, searchTerm, isClient])
 
-    const paginatedPOByDocNo = useMemo(() => {
+    const paginatedPrByDocNo = useMemo(() => {
         if (!isClient) return []
         const startIndex = (currentPage - 1) * 12
-        return filteredPOByDocNo.slice(startIndex, startIndex + 12)
-    }, [filteredPOByDocNo, currentPage, isClient])
+        return filteredPrByDocNo.slice(startIndex, startIndex + 12)
+    }, [filteredPrByDocNo, currentPage, isClient])
 
     const totalPages = useMemo(() => {
         if (!isClient) return 1
-        return Math.ceil(filteredPOByDocNo.length / 12)
-    }, [filteredPOByDocNo.length, isClient])
+        return Math.ceil(filteredPrByDocNo.length / 12)
+    }, [filteredPrByDocNo.length, isClient])
 
     useEffect(() => {
         if (user && isClient && docNo) {
-            fetchPOByDocNo()
+            fetchPrByDocNo()
         }
-    }, [user, isClient, docNo, fetchPOByDocNo])
+    }, [user, isClient, docNo, fetchPrByDocNo])
 
     const handlePageChange = (page) => setCurrentPage(page)
     const handleLimitChange = (newLimit) => setLimit(parseInt(newLimit))
@@ -168,11 +171,12 @@ export const useAllPOByDocNo = (docNo) => {
     }
     const handleApplyFilter = async () => {
         setCurrentPage(1)
-        await fetchPOByDocNo({ limit, search: searchTerm })
+        setLoading(true) // Set loading immediately when filter is applied
+        await fetchPrByDocNo({ limit, search: searchTerm })
     }
 
     const exportToExcel = () => {
-        if (!allPOByDocNo || allPOByDocNo.length === 0) {
+        if (!allPrByDocNo || allPrByDocNo.length === 0) {
             alert('ບໍ່ມີຂໍ້ມູນໃຫ້ສົ່ງອອກ')
             return
         }
@@ -223,7 +227,7 @@ export const useAllPOByDocNo = (docNo) => {
             'ລາຄາສັ່ງຊື້ 12',
             'ວັນທີສັ່ງຊື້ 12'
         ]        // สร้างข้อมูลสำหรับ Excel
-        const excelData = allPOByDocNo.map((item, index) => [
+        const excelData = allPrByDocNo.map((item, index) => [
             index + 1,
             item.PRODUCTCODE || '-',
             item.PRODUCTNAME || '-',
@@ -282,18 +286,19 @@ export const useAllPOByDocNo = (docNo) => {
     }
 
     return {
-        poByDocNo: paginatedPOByDocNo,
-        allPOByDocNo,
-        filteredPOByDocNo,
+        poByDocNo: paginatedPrByDocNo,
+        allPrByDocNo,
+        filteredPrByDocNo,
         loading,
         error,
         currentPage,
         limit,
         searchTerm,
         totalPages,
-        totalItems: filteredPOByDocNo.length,
+        totalItems: filteredPrByDocNo.length,
         isClient,
-        refetch: fetchPOByDocNo,
+        hasLoaded,
+        refetch: fetchPrByDocNo,
         handlePageChange,
         handleLimitChange,
         handleSearch,
