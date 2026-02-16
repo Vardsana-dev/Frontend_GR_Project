@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getStoredUserData, getAuthToken, isAuthenticated, logout, getAuthCookie, getUserDataCookie, clearAllCookies } from '@/lib/auth'
+import { getStoredUserData, getAuthToken, isAuthenticated, logout, clearAuthCookies } from '@/lib/auth'
 
 export const useAuth = () => {
     const [user, setUser] = useState(null)
@@ -22,9 +22,9 @@ export const useAuth = () => {
                 } else {
                     setUser(null)
                     setIsLoggedIn(false)
-                    // Clear invalid cookies
+                    // Clear invalid cookies only (no localStorage in this app)
                     if (typeof window !== 'undefined') {
-                        clearAllCookies()
+                        clearAuthCookies()
                     }
                 }
             } catch (error) {

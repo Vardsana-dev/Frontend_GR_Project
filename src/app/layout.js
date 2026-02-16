@@ -2,7 +2,12 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "CSC PO Department",
+  title: "CSC DOCUMENTS",
+  icons: {
+    icon: 'csc-items/CSC LOGO.png',
+    shortcut: 'csc-items/CSC LOGO.png',
+    apple: 'csc-items/CSC LOGO.png'
+  }
 };
 
 export default function RootLayout({ children }) {

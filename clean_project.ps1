@@ -4,7 +4,7 @@
 Write-Host "🧼 Cleaning Next.js project cache and unnecessary files..." -ForegroundColor Cyan
 
 # --- Step 1: Define paths ---
-$projectPath = "D:\CSC\csc-po-department"
+$projectPath = "D:\CSC\Projects\it-strong"
 Set-Location $projectPath
 
 # --- Step 2: List of folders to delete ---
@@ -44,3 +44,11 @@ foreach ($file in $files) {
 # --- Step 5: Finish ---
 Write-Host "`n🎉 Clean complete! Project is ready for packaging or sending to production." -ForegroundColor Green
 Pause
+
+# Methods to Run the Script
+# ===============================
+# cmd: powershell -ExecutionPolicy Bypass -File "D:\CSC\Projects\it-strong\clean_project.ps1"
+# ===============================
+# powershell: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+# .\clean_project.ps1
+# ===============================

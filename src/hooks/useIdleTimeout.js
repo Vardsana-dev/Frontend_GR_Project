@@ -59,7 +59,7 @@ export const useIdleTimeout = (timeoutMinutes = 10) => {
   useEffect(() => {
     const events = [
       "mousedown",
-      "mousemove",
+      // "mousemove",
       "keypress",
       "scroll",
       "touchstart",
