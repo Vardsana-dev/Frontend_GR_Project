@@ -34,9 +34,6 @@ export const useIdleTimeout = (timeoutMinutes = 10) => {
         (now - lastActivityRef.current) / (1000 * 60);
 
       if (timeSinceLastActivity >= timeoutMinutes) {
-        console.log(
-          `User has been idle for ${timeoutMinutes} minutes. Logging out...`
-        );
         logout();
       }
     }, timeoutMinutes * 60 * 1000);

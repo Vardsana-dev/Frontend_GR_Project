@@ -12,28 +12,18 @@ const LoginPage = () => {
     const { login, loading, error, setError } = useLogin()
 
     const [formData, setFormData] = useState({
-        office: "",
         username: "",
         password: ""
     })
 
-    const apiEndpoints = {
-        VTE_OFFICE: process.env.NEXT_PUBLIC_VTE_API,
-        PAKZUN_OFFICE: process.env.NEXT_PUBLIC_PAKZUN_API,
-        PAKZE_OFFICE: process.env.NEXT_PUBLIC_PAKZE_API,
-        DONT_OFFICE: process.env.NEXT_PUBLIC_DONT_API,
-    }
-
     const handleSubmit = async (e) => {
         e.preventDefault()
         const result = await login({
-            office: formData.office,
             username: formData.username,
             password: formData.password,
-            apiEndpoints
         })
         if (result.success) {
-            window.location.reload()
+            window.location.href = '/dashboard'
         }
     }
 

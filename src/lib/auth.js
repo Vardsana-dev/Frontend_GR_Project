@@ -43,7 +43,7 @@ export const clearAuthCookies = () => {
 
 // 🏢 User info helpers
 export const getSelectedApiUrl = () => getStoredUserData()?.selectedApiUrl
-export const getSelectedOffice = () => getStoredUserData()?.selectedOffice
+export const getUser = () => getStoredUserData()?.user
 
 // 🚪 Logout function
 export const logout = () => {

@@ -27,8 +27,7 @@ export const useAuth = () => {
                         clearAuthCookies()
                     }
                 }
-            } catch (error) {
-                console.error('Auth check error:', error)
+            } catch {
                 setUser(null)
                 setIsLoggedIn(false)
             } finally {

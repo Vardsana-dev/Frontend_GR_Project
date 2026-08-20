@@ -2,7 +2,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "CSC DOCUMENTS",
+  title: "IT STRONG",
   icons: {
     icon: 'csc-items/CSC LOGO.png',
     shortcut: 'csc-items/CSC LOGO.png',

@@ -28,8 +28,8 @@ export default function ScreensLayout({ children }) {
           {/* Content */}
           <main className="flex-1 overflow-hidden">
             {/* Desktop */}
-            <div className="hidden md:block h-full overflow-auto rounded-tl-4xl bg-[#fdfdfd] p-4 pt-0">
-              <div className="max-w-full">{children}</div>
+            <div className="hidden md:flex md:flex-col h-full overflow-auto rounded-tl-4xl bg-[#fdfdfd] p-4 pt-0">
+              <div className="flex-1 min-h-0">{children}</div>
             </div>
 
             {/* Mobile */}

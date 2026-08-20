@@ -44,44 +44,28 @@ export const items = [
   },
   {
     title: "ແຊັດ",
-    url: "/requests",
+    url: "/chats",
     icon: MessageCircleMore,
   },
-  {
-    title: "ປະຫວັດ",
-    icon: ClipboardClock,
-    items: [
-      { title: "ປະຫວັດການຮ້ອງຂໍ", url: "/requests-history" },
-    ],
-  },
-  {
-    title: "ລາຍງານ",
-    icon: ScrollText,
-    items: [
-      { title: "ລາຍງານການຮ້ອງຂໍ", url: "/reports-requests" },
-    ],
-  },
-  {
-    title: "ຕັ້ງຄ່າ",
-    url: "/requests",
-    icon: Settings,
-  },
   // {
-  //   title: "ຕັ້ງຄ່າ",
-  //   icon: Settings,
+  //   title: "ລາຍງານ",
+  //   icon: ScrollText,
   //   items: [
-  //     { title: "ລືມລະຫັດຜ່ານ", url: "/forgot-password" },
-  //     { title: "ການຕັ້ງຄ່າບັນຊີ", url: "/account-settings" },
-  //     { title: "ການຕັ້ງຄ່າລະບົບ", url: "/system-settings" },
+  //     { title: "ລາຍງານການຮ້ອງຂໍ", url: "/requests-reports" },
   //   ],
   // },
+  {
+    title: "ຕັ້ງຄ່າ",
+    url: "/settings",
+    icon: Settings,
+  },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="border-r-1 border-gray-300">
       {/* Row 1: Logo with white background */}
       <SidebarHeader className="bg-white flex items-center justify-center p-4">
         <Image

@@ -2,47 +2,48 @@
 
 import { useState } from "react"
 import { setAuthCookie } from "@/lib/auth"
-import { translateError } from "@/constants"
+import { ERROR_MESSAGES } from "@/constants"
 
 export const useLogin = () => {
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
 
-    const login = async ({ office, username, password, apiEndpoints }) => {
+    const login = async ({ username, password }) => {
         setLoading(true)
         setError("")
 
         try {
             // Validate
-            if (!office || !username || !password) {
+            if (!username || !password) {
                 throw new Error("REQUIRED_FIELD")
             }
 
-            const apiUrl = apiEndpoints[office]
-            if (!apiUrl) throw new Error("OFFICE_REQUIRED")
+            const apiUrl = process.env.NEXT_PUBLIC_API
+            const apiEndpoint = `${apiUrl}${process.env.NEXT_PUBLIC_LOGIN}`
 
-            const apiEndpoint = `${apiUrl}${process.env.NEXT_PUBLIC_LOGIN_ENDPOINT}`
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 10000)
 
             const response = await fetch(apiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password })
-            })
+                body: JSON.stringify({ usercode: username, pwds: password }),
+                signal: controller.signal
+            }).finally(() => clearTimeout(timeout))
 
             // Error from HTTP status
             if (!response.ok) {
-                const result = await response.json().catch(() => ({}))
-                throw new Error(result.message || String(response.status))
+                await response.json().catch(() => ({}))
+                throw new Error("AUTH_INVALID")
             }
 
             const data = await response.json()
-            const token = data.data_id?.token
+            const { token, pwds, ...userInfo } = data.data_id
 
             setAuthCookie(token, {
                 token,
-                user: data.data_id,
-                selectedOffice: office,
+                user: userInfo,
                 selectedApiUrl: apiUrl,
                 loginTime: new Date().toISOString()
             })
@@ -50,8 +51,13 @@ export const useLogin = () => {
             return { success: true }
 
         } catch (err) {
-            const translated = translateError(err.message)
-            setError(translated)
+            if (err.message === "REQUIRED_FIELD") {
+                setError(ERROR_MESSAGES.REQUIRED_FIELD)
+            } else if (err.name === "AbortError") {
+                setError(ERROR_MESSAGES.TIMEOUT_ERROR)
+            } else {
+                setError(ERROR_MESSAGES[err.message] || ERROR_MESSAGES.UNKNOWN_ERROR)
+            }
             return { success: false }
 
         } finally {

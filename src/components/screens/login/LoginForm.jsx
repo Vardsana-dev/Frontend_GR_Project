@@ -1,14 +1,18 @@
 'use client'
 
-import React from "react"
+import { React, useState } from "react"
 import { Input, Label, Button } from "@/components"
+import WarningDialog from "@/components/dialogs/WarningDialog"
 
 const LoginForm = ({ formData, setFormData, handleSubmit, loading }) => {
+
+    const [open, setOpen] = useState(false);
+
     return (
         <form onSubmit={handleSubmit} className="space-y-5 text-blue-900">
 
             <div>
-                <Label className={'text-white'}>ຊື່ພະນັກງານ</Label>
+                <Label className={'text-white'}>ໄອດີພະນັກງານ</Label>
                 <Input
                     type="text"
                     className="bg-transparent text-white placeholder-white/50 border-white focus:!border-white focus:!ring-white/50 focus-visible:!border-white focus-visible:!ring-white/50"
@@ -26,7 +30,7 @@ const LoginForm = ({ formData, setFormData, handleSubmit, loading }) => {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
                 <div className="flex justify-end mt-1.5">
-                    <span className="text-xs text-white cursor-pointer hover:text-gray-200 transition-colors">
+                    <span onClick={() => setOpen(true)} className="text-xs text-white cursor-pointer hover:text-gray-200 transition-colors">
                         ລືມລະຫັດຜ່ານ?
                     </span>
                 </div>
@@ -39,6 +43,7 @@ const LoginForm = ({ formData, setFormData, handleSubmit, loading }) => {
             >
                 {loading ? "ກຳລັງເຂົ້າ..." : "ເຂົ້າສູ່ລະບົບ"}
             </Button>
+            <WarningDialog open={open} onClose={() => setOpen(false)} />
         </form>
     )
 }

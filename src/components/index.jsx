@@ -16,6 +16,8 @@ export * from './ui/chart'
 export * from './ui/table'
 export * from './ui/alert-dialog'
 export * from './ui/pagination'
+export * from './ui/dialog'
+export * from './ui/textarea'
 
 // Custom components
 export { default as Title } from './customs/title'
