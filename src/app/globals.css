@@ -139,7 +139,7 @@
 [data-slot="sidebar-container"] {
   top: 0 !important;
   height: 100svh !important;
-  border: none !important;
+  /* border: none !important; */
 }
 
 [data-slot="sidebar-inner"] {
