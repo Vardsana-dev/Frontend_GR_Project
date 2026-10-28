@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Download, ChevronDown } from "lucide-react";
+import { Search, Download, ChevronDown, Loader2 } from "lucide-react";
 import { SupplierDropdownItem } from "@/hooks/po-hook/useGetSuppliersDropdown";
 
 interface FilterSectionProps {
@@ -24,6 +24,8 @@ interface FilterSectionProps {
   setStatus: (val: string) => void;
   suppliers?: SupplierDropdownItem[];
   onSearch?: () => void;
+  onDownload?: () => void;
+  downloadLoading?: boolean;
 }
 
 export function FilterSection({
@@ -33,7 +35,9 @@ export function FilterSection({
   apcode, setApcode,
   status, setStatus,
   suppliers = [],
-  onSearch
+  onSearch,
+  onDownload,
+  downloadLoading = false,
 }: FilterSectionProps) {
   return (
     <div className="space-y-4 mb-6">
@@ -53,9 +57,18 @@ export function FilterSection({
             }}
           />
         </div>
-        <Button className="w-full sm:w-auto bg-[#1A368F] hover:bg-[#152a70] text-white flex gap-2">
-          <Download className="w-4 h-4" />
-          ດາວໂຫຼດ
+        <Button 
+          type="button"
+          onClick={onDownload}
+          disabled={downloadLoading}
+          className="w-full sm:w-auto bg-[#1A368F] hover:bg-[#152a70] text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed transition-all"
+        >
+          {downloadLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          <span>{downloadLoading ? "ກຳລັງດາວໂຫຼດ..." : "ດາວໂຫຼດ"}</span>
         </Button>
       </div>
 
@@ -106,8 +119,9 @@ export function FilterSection({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">ທັງໝົດ</SelectItem>
-              <SelectItem value="COMPLETE">ຍືນຍັນແລ້ວ</SelectItem>
-              <SelectItem value="PARTIAL">ຮັບບາງສ່ວນ</SelectItem>
+              <SelectItem value="RECEIVED">ຮັບແລ້ວ</SelectItem>
+              <SelectItem value="CANCELLED">ຍົກເລີກ</SelectItem>
+              <SelectItem value="DRAFT">ຮ່າງ</SelectItem>
             </SelectContent>
           </Select>
         </div>

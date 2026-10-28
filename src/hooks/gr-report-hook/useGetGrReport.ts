@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { getAuthToken } from "@/lib/auth";
+import { getAuthToken, getSelectedApiUrl } from "@/lib/auth";
 import { ERROR_MESSAGES } from "@/constants";
 
 export interface GrReportSummary {
@@ -57,6 +57,9 @@ export interface GetGrReportParams {
   search?: string;
   startDate?: string;
   endDate?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  status?: string;
   receiptStatus?: string;
   apcode?: string;
   page?: number;
@@ -73,23 +76,41 @@ export const useGetGrReport = () => {
     setError("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API || "";
-      const envEndpointRaw = process.env.NEXT_PUBLIC_GET_GR_REPORT || "";
+      const apiUrl = process.env.NEXT_PUBLIC_API || getSelectedApiUrl() || "";
+      const base = (apiUrl || "").replace(/\/+$/, "");
+      const envEndpointRaw = process.env.NEXT_PUBLIC_GET_GR_REPORT || "/api/gr/report";
       const envEndpoint = envEndpointRaw.split('?')[0]; // Strip hardcoded query params like ?page=1&limit=20
+      const path = envEndpoint.startsWith("/") ? envEndpoint : `/${envEndpoint}`;
 
       const queryParams = new URLSearchParams();
-      if (params.search) queryParams.append("search", params.search);
-      if (params.startDate) queryParams.append("startDate", params.startDate); // Maybe backend expects startDate instead of dateFrom?
-      if (params.endDate) queryParams.append("endDate", params.endDate); // Let's try both or just check API docs? Actually I'll pass dateFrom as well just in case.
-      if (params.startDate) queryParams.append("dateFrom", params.startDate);
-      if (params.endDate) queryParams.append("dateTo", params.endDate);
-      if (params.receiptStatus && params.receiptStatus !== "ທັງໝົດ" && params.receiptStatus !== "all") queryParams.append("receiptStatus", params.receiptStatus);
-      if (params.apcode && params.apcode !== "ທັງໝົດ" && params.apcode !== "all") queryParams.append("apcode", params.apcode);
+      if (params.search && params.search.trim()) queryParams.append("search", params.search.trim());
+      
+      const dateFrom = params.dateFrom || params.startDate;
+      if (dateFrom && dateFrom.trim()) {
+        queryParams.append("dateFrom", dateFrom.trim());
+        queryParams.append("startDate", dateFrom.trim());
+      }
+      
+      const dateTo = params.dateTo || params.endDate;
+      if (dateTo && dateTo.trim()) {
+        queryParams.append("dateTo", dateTo.trim());
+        queryParams.append("endDate", dateTo.trim());
+      }
+      
+      const status = params.status || params.receiptStatus;
+      if (status && status !== "ທັງໝົດ" && status !== "all") {
+        queryParams.append("status", status.trim());
+        queryParams.append("receiptStatus", status.trim());
+      }
+      
+      if (params.apcode && params.apcode !== "ທັງໝົດ" && params.apcode !== "all") {
+        queryParams.append("apcode", params.apcode.trim());
+      }
       if (params.page) queryParams.append("page", params.page.toString());
       if (params.limit) queryParams.append("limit", params.limit.toString());
 
       const queryString = queryParams.toString();
-      const apiEndpoint = `${apiUrl}${envEndpoint}?${queryString}`;
+      const apiEndpoint = `${base}${path}${queryString ? `?${queryString}` : ""}`;
 
       const token = getAuthToken();
 

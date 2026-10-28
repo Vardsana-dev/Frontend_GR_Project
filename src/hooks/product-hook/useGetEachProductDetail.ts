@@ -3,6 +3,7 @@ import { getAuthToken } from "@/lib/auth";
 import { ERROR_MESSAGES } from "@/constants";
 
 export interface ProductUnit {
+  roworder?: number;
   unitcode: string;
   barcode: string;
   barcodetext: string;

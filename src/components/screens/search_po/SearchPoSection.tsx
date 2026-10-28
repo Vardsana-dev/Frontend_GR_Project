@@ -1,11 +1,11 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronDown, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronDown, Search, X, AlertCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { usePoList } from '@/hooks/po-hook/usePoList';
@@ -18,31 +18,61 @@ export function SearchPoSection() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [supplier, setSupplier] = useState("ທັງໝົດ");
-  const [status, setStatus] = useState("ທັງໝົດ");
+  const [supplier, setSupplier] = useState("ALL");
+  const [status, setStatus] = useState("NOT_RECEIVED");
 
-  const { data, loading, fetchPoList } = usePoList();
+  const { data, loading, error, fetchPoList } = usePoList();
   const { data: supplierData, fetchSupplierList } = useSupplierList();
 
-  const handleSearch = (targetPage = page, targetLimit = limit) => {
+  const isInitialMount = useRef(true);
+
+  // Central search execution function
+  const executeSearch = useCallback((
+    targetPage: number = 1,
+    targetLimit: number = limit,
+    overrideSearch?: string,
+    overrideStatus?: string,
+    overrideSupplier?: string
+  ) => {
+    const pageNum = typeof targetPage === 'number' && !isNaN(targetPage) && targetPage > 0 ? targetPage : 1;
+    const limitNum = typeof targetLimit === 'number' && !isNaN(targetLimit) && targetLimit > 0 ? targetLimit : limit;
+    const searchTerm = overrideSearch !== undefined ? overrideSearch : search;
+    const currentStatus = overrideStatus !== undefined ? overrideStatus : status;
+    const currentSupplier = overrideSupplier !== undefined ? overrideSupplier : supplier;
+
+    setPage(pageNum);
     fetchPoList({
-      page: targetPage,
-      limit: targetLimit,
-      search,
+      page: pageNum,
+      limit: limitNum,
+      search: searchTerm.trim(),
       startDate,
       endDate,
-      supplier,
-      status
+      supplier: currentSupplier,
+      status: currentStatus
     });
-  };
+  }, [fetchPoList, limit, search, startDate, endDate, supplier, status]);
 
+  // Initial load
   useEffect(() => {
-    handleSearch(page, limit);
-  }, [page, limit]);
-
-  useEffect(() => {
+    executeSearch(1, limit);
     fetchSupplierList({ limit: 100 });
-  }, [fetchSupplierList]);
+  }, []);
+
+  // Debounced auto-search when typing
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      executeSearch(1, limit, search);
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+
 
   // Extract list properly whether it's wrapped in { items: [] }, { data: [] }, or direct array
   const rawList = Array.isArray(data) ? data : (data?.items || data?.data || data?.rows || []);
@@ -58,13 +88,26 @@ export function SearchPoSection() {
   const supplierList = Array.isArray(supplierData) ? supplierData : (supplierData?.items || supplierData?.data || []);
 
   const getStatusColor = (statusText: string) => {
-    if (!statusText) return 'bg-gray-100 text-gray-700';
-    if (statusText?.includes('ບໍ່ຢືນຢັນ') || statusText === 'CANCELLED') return 'bg-red-100 text-red-700';
-    if (statusText?.includes('ຍັງບໍ່ທັນຮັບເຂົ້າ')) return 'bg-yellow-100 text-yellow-700';
-    if (statusText?.includes('ລໍຖ້າ') || statusText === 'DRAFT' || statusText === 'PENDING') return 'bg-yellow-100 text-yellow-700';
-    if (statusText?.includes('ບາງສ່ວນ') || statusText === 'IN_REVIEW') return 'bg-pink-100 text-pink-700';
-    if (statusText?.includes('ຮັບເຂົ້າແລ້ວ') || statusText === 'APPROVED') return 'bg-green-100 text-green-700';
-    return 'bg-green-100 text-green-700'; // Default green
+    if (!statusText) return 'bg-yellow-100 text-yellow-700';
+    const s = String(statusText).toUpperCase();
+    if (s.includes('ບໍ່ຢືນຢັນ') || s.includes('ຍົກເລີກ') || s === 'CANCELLED') return 'bg-red-100 text-red-700';
+    if (s.includes('ບາງສ່ວນ') || s.includes('PARTIAL') || s === 'IN_REVIEW') return 'bg-pink-100 text-pink-700';
+    if (s.includes('ຮັບເຂົ້າແລ້ວ') || s.includes('ຮັບແລ້ວ') || s === 'RECEIVED' || s === 'COMPLETED') return 'bg-green-100 text-green-700';
+    if (s.includes('ຍັງບໍ່ທັນ') || s.includes('ລໍຖ້າ') || s === 'PENDING' || s === 'UNRECEIVED' || s.includes('NOT_RECEIVED')) return 'bg-yellow-100 text-yellow-700';
+    if (s === 'DRAFT' || s === 'ຮ່າງ') return 'bg-orange-100 text-orange-700';
+    return 'bg-yellow-100 text-yellow-700';
+  };
+
+  const formatStatus = (statusText: string) => {
+    if (!statusText) return 'ຍັງບໍ່ທັນຮັບເຂົ້າ';
+    const s = String(statusText).toUpperCase();
+    if (s.includes('ບາງສ່ວນ') || s.includes('PARTIAL') || s === 'IN_REVIEW') return 'ຮັບເຂົ້າບາງສ່ວນ';
+    if (s.includes('ຮັບເຂົ້າແລ້ວ') || s.includes('ຮັບແລ້ວ') || s === 'RECEIVED' || s === 'COMPLETED') return 'ຮັບແລ້ວ';
+    if (s.includes('ຍັງບໍ່ທັນ') || s.includes('ລໍຖ້າ') || s === 'PENDING' || s === 'UNRECEIVED' || s.includes('NOT_RECEIVED')) return 'ຍັງບໍ່ທັນຮັບເຂົ້າ';
+    if (s.includes('ຍົກເລີກ') || s.includes('ບໍ່ຢືນຢັນ') || s === 'CANCELLED') return 'ຍົກເລີກ';
+    if (s.includes('ຮ່າງ') || s === 'DRAFT') return 'ຮ່າງ';
+    if (s.includes('ອະນຸມັດ') || s === 'APPROVED' || s === 'ຍືນຍັນແລ້ວ') return 'ຍັງບໍ່ທັນຮັບເຂົ້າ';
+    return statusText;
   };
 
   const getSupplierName = (supplier: any) => {
@@ -87,14 +130,44 @@ export function SearchPoSection() {
       {/* Search Bar */}
       <div className="relative w-full md:w-1/2">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <Input 
-          className="pl-10 h-12 bg-gray-100/80 border-transparent rounded-full focus-visible:ring-1 focus-visible:ring-gray-300" 
-          placeholder="ຄົ້ນຫາ PO..." 
+        <Input
+          className="pl-10 pr-10 h-12 bg-gray-100/80 border-transparent rounded-full focus-visible:ring-1 focus-visible:ring-gray-300"
+          placeholder="ຄົ້ນຫາ PO..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              executeSearch(1, limit);
+            }
+          }}
         />
+        {search && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              executeSearch(1, limit, "");
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+            title="ລຶບຄຳຄົ້ນຫາ"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            <span>{error}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => executeSearch(page, limit)} className="text-red-700 hover:bg-red-100">
+            ລອງໃໝ່
+          </Button>
+        </div>
+      )}
 
       {/* Filter Card */}
       <Card className="shadow-sm border-gray-200/60 rounded-2xl">
@@ -106,7 +179,7 @@ export function SearchPoSection() {
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-[#eef2ff] border-transparent text-[#1f3a8a] h-11 font-medium rounded-lg block w-full" />
               </div>
             </div>
-            
+
             <div className="w-full lg:flex-1">
               <label className="text-sm font-semibold text-gray-500 mb-1.5 block">ວັນທີສິ້ນສຸດ</label>
               <div className="relative">
@@ -117,15 +190,19 @@ export function SearchPoSection() {
             <div className="w-full lg:flex-1">
               <label className="text-sm font-semibold text-gray-500 mb-1.5 block">Supplier</label>
               <div className="relative">
-                <select 
-                  value={supplier} 
-                  onChange={(e) => setSupplier(e.target.value)} 
+                <select
+                  value={supplier}
+                  onChange={(e) => {
+                    const newSupplier = e.target.value;
+                    setSupplier(newSupplier);
+                    executeSearch(1, limit, undefined, undefined, newSupplier);
+                  }}
                   className="appearance-none w-full bg-[#eef2ff] border-transparent text-[#1f3a8a] h-11 font-medium rounded-lg px-3 outline-none focus-visible:ring-1 focus-visible:ring-gray-300"
                 >
-                  <option value="ທັງໝົດ">ທັງໝົດ</option>
+                  <option value="ALL">ທັງໝົດ</option>
                   {supplierList.map((sup: any, idx: number) => (
                     <option key={idx} value={sup.apcode || sup.code || sup.id || sup.apname || sup.name}>
-                      {sup.apname || sup.name || `Supplier ${idx+1}`}
+                      {sup.apname || sup.name || `Supplier ${idx + 1}`}
                     </option>
                   ))}
                 </select>
@@ -136,21 +213,30 @@ export function SearchPoSection() {
             <div className="w-full lg:flex-1">
               <label className="text-sm font-semibold text-gray-500 mb-1.5 block">ສະຖານະ</label>
               <div className="relative">
-                <select 
-                  value={status} 
-                  onChange={(e) => setStatus(e.target.value)} 
+                <select
+                  value={status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value;
+                    setStatus(newStatus);
+                    executeSearch(1, limit, undefined, newStatus);
+                  }}
                   className="appearance-none w-full bg-[#eef2ff] border-transparent text-[#1f3a8a] h-11 font-medium rounded-lg px-3 outline-none focus-visible:ring-1 focus-visible:ring-gray-300"
                 >
-                  <option value="ທັງໝົດ">ທັງໝົດ</option>
-                  <option value="GR ຍັງບໍ່ທັນຮັບເຂົ້າ">ຍັງບໍ່ທັນຮັບເຂົ້າ</option>
-                  <option value="GR ຮັບເຂົ້າບາງສ່ວນ">ຮັບບາງສ່ວນ</option>
-                  <option value="GR ຮັບເຂົ້າແລ້ວ">ຮັບເຂົ້າແລ້ວ</option>
+                  <option value="ALL">ທັງໝົດ</option>
+                  <option value="NOT_RECEIVED">ຍັງບໍ່ທັນຮັບເຂົ້າ</option>
+                  <option value="PARTIALLY_RECEIVED">ຮັບບາງສ່ວນ</option>
+                  <option value="RECEIVED">ຮັບເຂົ້າແລ້ວ</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1f3a8a] pointer-events-none" />
               </div>
             </div>
 
-            <Button onClick={handleSearch} className="h-11 px-8 bg-[#1e40af] hover:bg-[#1e3a8a] text-white rounded-lg">
+            <Button
+              type="button"
+              onClick={() => executeSearch(1, limit)}
+              className="h-11 px-8 bg-[#1e40af] hover:bg-[#1e3a8a] text-white rounded-lg flex items-center justify-center gap-2"
+            >
+              <Search className="w-4 h-4" />
               ຄົ້ນຫາ
             </Button>
           </div>
@@ -183,6 +269,7 @@ export function SearchPoSection() {
               ) : poDataList.length > 0 ? (
                 poDataList.map((row: any, idx: number) => {
                   const poNum = row.poNumber || row.docno || row.grcode;
+                  const displayStatus = formatStatus(row.grStatus || row.status || row.poStatus || row.approvalStatus);
                   return (
                     <TableRow key={idx} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
                       <TableCell className="text-center text-gray-500">{row.no || (page - 1) * limit + idx + 1}</TableCell>
@@ -194,12 +281,12 @@ export function SearchPoSection() {
                       <TableCell className="text-center text-gray-500">{row.shipdate || row.deliveryDate || row.dueDate || '-'}</TableCell>
                       <TableCell className="text-center text-gray-500">{row.qty || row.itemCount || '-'}</TableCell>
                       <TableCell className="text-center">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold ${row.statusColor || getStatusColor(row.grStatus || row.status || row.poStatus || row.approvalStatus)}`}>
-                          {row.grStatus || row.status || row.poStatus || row.approvalStatus || 'Unknown'}
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold ${row.statusColor || getStatusColor(displayStatus)}`}>
+                          {displayStatus}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Link href={`/search_po/${poNum}?status=${encodeURIComponent(row.grStatus || row.status || row.poStatus || row.approvalStatus || 'Unknown')}`}>
+                        <Link href={`/search_po/${poNum}?status=${encodeURIComponent(displayStatus)}`}>
                           <Button variant="outline" size="sm" className="h-8 border-gray-200">ເບິ່ງ</Button>
                         </Link>
                       </TableCell>
@@ -219,10 +306,10 @@ export function SearchPoSection() {
             page={page}
             totalPages={totalPages}
             limit={limit}
-            onPageChange={(newPage) => setPage(newPage)}
+            onPageChange={(newPage) => executeSearch(newPage, limit)}
             onLimitChange={(newLimit) => {
               setLimit(newLimit);
-              setPage(1);
+              executeSearch(1, newLimit);
             }}
           />
         </CardContent>

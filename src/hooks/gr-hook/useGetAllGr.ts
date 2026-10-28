@@ -30,8 +30,29 @@ export const useGetAllGr = () => {
       if (params.search) queryParams.append("search", params.search);
       if (params.startDate) queryParams.append("dateFrom", params.startDate);
       if (params.endDate) queryParams.append("dateTo", params.endDate);
-      if (params.status && params.status !== "ທັງໝົດ" && params.status !== "all") queryParams.append("approvalStatus", params.status);
-      if (params.receiptStatus && params.receiptStatus !== "ທັງໝົດ" && params.receiptStatus !== "all") queryParams.append("receiptStatus", params.receiptStatus);
+      if (params.status && params.status !== "ທັງໝົດ" && params.status !== "all" && params.status !== "ALL") {
+        const statusMap: Record<string, string> = {
+          "ຮັບແລ້ວ": "RECEIVED",
+          "RECEIVED": "RECEIVED",
+          "ຮ່າງ": "DRAFT",
+          "DRAFT": "DRAFT",
+          "ຍົກເລີກ": "CANCELLED",
+          "CANCELLED": "CANCELLED",
+          "ບໍ່ຢືນຢັນ": "CANCELLED",
+          "ບໍ່ຍືນຢັນ": "CANCELLED",
+        };
+        const mappedStatus = params.status
+          .split(',')
+          .map((s) => statusMap[s.trim()] || s.trim())
+          .join(',');
+        queryParams.append("status", mappedStatus);
+      } else if (params.receiptStatus && params.receiptStatus !== "ທັງໝົດ" && params.receiptStatus !== "all" && params.receiptStatus !== "ALL") {
+        if (params.receiptStatus.includes("COMPLETE") || params.receiptStatus.includes("PARTIAL")) {
+          queryParams.append("status", "RECEIVED");
+        } else {
+          queryParams.append("status", params.receiptStatus);
+        }
+      }
       if (params.apcode && params.apcode !== "ທັງໝົດ" && params.apcode !== "all") queryParams.append("apcode", params.apcode);
       if (params.page) queryParams.append("page", params.page.toString());
       if (params.limit) queryParams.append("limit", params.limit.toString());

@@ -4,9 +4,13 @@ import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
-import { useGetEachProductDetail } from '@/hooks/product-hook/useGetEachProductDetail';
+import { useGetEachProductDetail, ProductUnit } from '@/hooks/product-hook/useGetEachProductDetail';
+import { useGetDamageEvidencePhoto } from '@/hooks/gr-damage-photo-hook/useGetDamageEvidencePhoto';
+import { getSelectedApiUrl } from '@/lib/auth';
 import Image from 'next/image';
-import { Package, Download, ArrowLeft } from 'lucide-react';
+import { Package, Download, ArrowLeft, Edit3, Loader2 } from 'lucide-react';
+import { EditProductBarcodeModal } from '@/components/dialogs/EditProductBarcodeModal';
+import { normalizeProductImageUrl } from '@/lib/imageUtils';
 
 interface ProductDetailDialogProps {
   productCode: string | null;
@@ -14,9 +18,16 @@ interface ProductDetailDialogProps {
   onClose: () => void;
 }
 
+const resolveImageUrl = (url: string) => {
+  return normalizeProductImageUrl(url);
+};
+
 export function ProductDetailDialog({ productCode, isOpen, onClose }: ProductDetailDialogProps) {
   const { data, loading, error, fetchProductDetail } = useGetEachProductDetail();
+  const { downloadPhoto, loading: isDownloading } = useGetDamageEvidencePhoto();
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  const [isEditBarcodeOpen, setIsEditBarcodeOpen] = useState(false);
+  const [selectedUnitToEdit, setSelectedUnitToEdit] = useState<ProductUnit | null>(null);
 
   useEffect(() => {
     if (isOpen && productCode) {
@@ -27,17 +38,43 @@ export function ProductDetailDialog({ productCode, isOpen, onClose }: ProductDet
 
   const allImages = React.useMemo(() => {
     if (!data) return [];
-    const imgs = [];
-    if (data.imageUrl) imgs.push(data.imageUrl);
-    if (data.images && data.images.length > 0) {
-      imgs.push(...data.images);
+    const imgs: string[] = [];
+    const addImg = (raw: any) => {
+      if (!raw || typeof raw !== 'string') return;
+      const trimmed = raw.trim();
+      if (!trimmed) return;
+      imgs.push(resolveImageUrl(trimmed));
+    };
+
+    addImg(data.imageUrl);
+    addImg((data as any).image);
+    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+      data.images.forEach((img: any) => {
+        if (typeof img === 'string') addImg(img);
+        else if (img?.url && typeof img.url === 'string') addImg(img.url);
+        else if (img?.imageUrl && typeof img.imageUrl === 'string') addImg(img.imageUrl);
+      });
     }
-    // ensure uniqueness
+    if (Array.isArray((data as any).attachments)) {
+      (data as any).attachments.forEach((att: any) => {
+        if (att?.url && typeof att.url === 'string') addImg(att.url);
+        else if (att?.attachmentId) imgs.push(String(att.attachmentId));
+      });
+    }
     return Array.from(new Set(imgs));
   }, [data]);
 
   const displayImages = allImages.length > 0 ? allImages : [];
   const currentImage = displayImages[selectedImageIdx];
+
+  const handleDownload = async () => {
+    if (!currentImage) {
+      alert("ບໍ່ມີຮູບພາບສິນຄ້າເພື່ອດາວໂຫຼດ");
+      return;
+    }
+    const fileName = `${data?.code || 'product'}_image_${selectedImageIdx + 1}`;
+    await downloadPhoto(currentImage, fileName);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -112,17 +149,44 @@ export function ProductDetailDialog({ productCode, isOpen, onClose }: ProductDet
             {/* RIGHT COLUMN: PRODUCT INFORMATION CARD (~35%) */}
             <div className="flex-[3.5] bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-8 flex flex-col overflow-y-auto h-full">
               
-              {/* Product Code */}
-              <h3 className="text-xl font-bold text-[#1e3a8a] mb-5 tracking-wide">
-                ລະຫັດສິນຄ້າ : {data.code}
-              </h3>
+              {/* Product Code & Edit Button */}
+              <div className="flex items-center justify-between mb-5 gap-3">
+                <h3 className="text-xl font-bold text-[#1e3a8a] tracking-wide">
+                  ລະຫັດສິນຄ້າ : {data.code}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedUnitToEdit(data.units && data.units.length > 0 ? data.units[0] : null);
+                    setIsEditBarcodeOpen(true);
+                  }}
+                  className="h-9 px-3.5 bg-blue-50 hover:bg-blue-100 text-[#1e3a8a] border border-blue-200 rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-[#1e3a8a]" />
+                  <span>ແກ້ໄຂບາໂຄດ</span>
+                </button>
+              </div>
               
               {/* Barcode List */}
-              <div className="flex flex-col gap-1.5 mb-6">
+              <div className="flex flex-col gap-2 mb-6">
                 {data.units?.length > 0 ? (
                   data.units.map((unit, idx) => (
-                    <div key={idx} className="bg-[#f3f4f6] text-gray-600 px-4 py-2.5 rounded-lg text-[15px]">
-                      Barcode {unit.barcode}
+                    <div
+                      key={idx}
+                      className="bg-[#f3f4f6] text-gray-700 px-4 py-2.5 rounded-lg text-[15px] font-medium border border-transparent flex items-center justify-between group hover:border-blue-200 hover:bg-blue-50/40 transition-colors"
+                    >
+                      <span>Barcode {unit.barcode}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedUnitToEdit(unit);
+                          setIsEditBarcodeOpen(true);
+                        }}
+                        title="ແກ້ໄຂບາໂຄດນີ້"
+                        className="text-gray-400 hover:text-blue-600 p-1 rounded-md transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
                     </div>
                   ))
                 ) : (
@@ -179,8 +243,18 @@ export function ProductDetailDialog({ productCode, isOpen, onClose }: ProductDet
               
               {/* Download Button (Fixed at Bottom of Right Card) */}
               <div className="mt-auto pt-4 shrink-0">
-                <button className="w-full bg-[#2b4c9b] hover:bg-[#1e3a8a] text-white py-4 rounded-xl flex items-center justify-center gap-2 font-semibold text-[15px] transition-colors shadow-sm">
-                  <Download className="w-[18px] h-[18px]" strokeWidth={2} /> ດາວໂຫຼດ
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={isDownloading || !currentImage}
+                  className="w-full bg-[#2b4c9b] hover:bg-[#1e3a8a] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl flex items-center justify-center gap-2 font-semibold text-[15px] transition-colors shadow-sm cursor-pointer"
+                >
+                  {isDownloading ? (
+                    <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                  ) : (
+                    <Download className="w-[18px] h-[18px]" strokeWidth={2} />
+                  )}
+                  <span>{isDownloading ? "ກຳລັງດາວໂຫຼດ..." : "ດາວໂຫຼດ"}</span>
                 </button>
               </div>
 
@@ -189,6 +263,19 @@ export function ProductDetailDialog({ productCode, isOpen, onClose }: ProductDet
           </div>
         )}
       </DialogContent>
+
+      {/* Edit Product Barcode Modal */}
+      <EditProductBarcodeModal
+        isOpen={isEditBarcodeOpen}
+        onClose={() => setIsEditBarcodeOpen(false)}
+        product={data}
+        selectedUnit={selectedUnitToEdit}
+        onSuccess={() => {
+          if (productCode) {
+            fetchProductDetail(productCode);
+          }
+        }}
+      />
     </Dialog>
   );
 }

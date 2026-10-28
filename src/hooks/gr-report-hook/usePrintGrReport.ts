@@ -1,69 +1,92 @@
 import { useState, useCallback } from "react";
-import { getAuthToken } from "@/lib/auth";
+import { getAuthToken, getSelectedApiUrl } from "@/lib/auth";
 import { ERROR_MESSAGES } from "@/constants";
-import { GrReportResponse, GrReportItem } from "./useGetGrReport";
 
 export interface PrintGrReportParams {
   search?: string;
   startDate?: string;
   endDate?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  status?: string;
   receiptStatus?: string;
   apcode?: string;
+}
+
+export interface PrintGrReportResult {
+  success: boolean;
+  url?: string;
+  blob?: Blob;
+  filename?: string;
+  error?: any;
 }
 
 export const usePrintGrReport = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const printGrReport = useCallback(async (params: PrintGrReportParams = {}) => {
-    // 1. OPEN TAB SYNCHRONOUSLY
-    // This MUST happen before any `await` to bypass strict browser popup blockers!
-    const previewTab = window.open("about:blank", "_blank");
-    if (previewTab) {
-      previewTab.document.write(
-        "<html><body style='font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh;'><h2>Loading PDF Preview...</h2></body></html>"
-      );
-    }
-
+  const printGrReport = useCallback(async (params: PrintGrReportParams = {}): Promise<PrintGrReportResult> => {
     setLoading(true);
     setError("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API || "";
-      const envEndpointRaw = process.env.NEXT_PUBLIC_PRINT_GR_REPORT || "";
-      const envEndpoint = envEndpointRaw.split('?')[0]; 
-      
-      const buildQueryParams = () => {
-        const queryParams = new URLSearchParams();
-        if (params.search) queryParams.append("search", params.search);
-        if (params.startDate) {
-          queryParams.append("dateFrom", params.startDate);
-        }
-        if (params.endDate) {
-          queryParams.append("dateTo", params.endDate);
-        }
-        if (params.receiptStatus && params.receiptStatus !== "ທັງໝົດ" && params.receiptStatus !== "all") {
-          queryParams.append("status", params.receiptStatus);
-        }
-        if (params.apcode && params.apcode !== "ທັງໝົດ" && params.apcode !== "all") {
-          queryParams.append("apcode", params.apcode);
-        }
-        return queryParams.toString();
-      };
+      const apiUrl = process.env.NEXT_PUBLIC_API || getSelectedApiUrl() || "";
+      const base = (apiUrl || "").replace(/\/+$/, "");
+      const envEndpointRaw = process.env.NEXT_PUBLIC_PRINT_GR_REPORT || "/api/gr/report/pdf";
+      const envEndpoint = envEndpointRaw.split("?")[0] || "/api/gr/report/pdf";
+      const path = envEndpoint.startsWith("/") ? envEndpoint : `/${envEndpoint}`;
+
+      const queryParams = new URLSearchParams();
+      if (params.search && params.search.trim()) {
+        queryParams.append("search", params.search.trim());
+      }
+      if (params.apcode && params.apcode !== "ທັງໝົດ" && params.apcode !== "all") {
+        queryParams.append("apcode", params.apcode.trim());
+      }
+      const rawStatus = params.status || params.receiptStatus;
+      if (rawStatus && rawStatus !== "ທັງໝົດ" && rawStatus !== "all" && rawStatus !== "ALL") {
+        const statusMap: Record<string, string> = {
+          "ຮັບແລ້ວ": "RECEIVED",
+          "RECEIVED": "RECEIVED",
+          "ຮ່າງ": "DRAFT",
+          "DRAFT": "DRAFT",
+          "ຍົກເລີກ": "CANCELLED",
+          "CANCELLED": "CANCELLED",
+          "ບໍ່ຢືນຢັນ": "CANCELLED",
+          "ບໍ່ຍືນຢັນ": "CANCELLED",
+        };
+        const mappedStatus = rawStatus
+          .split(',')
+          .map((s) => statusMap[s.trim()] || s.trim())
+          .join(',');
+        queryParams.append("status", mappedStatus);
+      }
+      const dateFrom = params.dateFrom || params.startDate;
+      if (dateFrom && dateFrom.trim()) {
+        queryParams.append("dateFrom", dateFrom.trim());
+      }
+      const dateTo = params.dateTo || params.endDate;
+      if (dateTo && dateTo.trim()) {
+        queryParams.append("dateTo", dateTo.trim());
+      }
 
       const token = getAuthToken();
-      const headers = {
-        "Content-Type": "application/json",
+      const headers: Record<string, string> = {
+        Accept: "application/pdf, application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      const queryString = buildQueryParams();
-      const apiEndpoint = `${apiUrl}${envEndpoint}${queryString ? `?${queryString}` : ''}`;
-      
+      const queryString = queryParams.toString();
+      const apiEndpoint = `${base}${path}${queryString ? `?${queryString}` : ""}`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // Allow up to 30s for server PDF rendering
+
       const response = await fetch(apiEndpoint, {
         method: "GET",
         headers,
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -74,27 +97,23 @@ export const usePrintGrReport = () => {
           throw new Error("PRINT_GR_REPORT_ERROR");
         }
       }
-      
+
       const blob = await response.blob();
-      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+      const pdfBlob = new Blob([blob], { type: "application/pdf" });
       const url = window.URL.createObjectURL(pdfBlob);
-      
-      // 2. UPDATE THE TAB URL
-      // Now that the download is finished, navigate our pre-opened tab to the PDF
-      if (previewTab) {
-        previewTab.location.href = url;
-      } else {
-        // Fallback if the popup was somehow still blocked
-        window.location.href = url;
+
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "";
+      if (contentDisposition && contentDisposition.includes("filename=")) {
+        filename = contentDisposition
+          .split("filename=")[1]
+          .replace(/["']/g, "")
+          .trim();
       }
-      
-      return { success: true };
+
+      return { success: true, url, blob: pdfBlob, filename };
     } catch (err: any) {
-      // 3. CLOSE TAB ON ERROR
-      if (previewTab) {
-        previewTab.close();
-      }
-      console.error("Print Catch Error:", err);
+      console.error("Print GR Report Catch Error:", err);
       if (err.name === "AbortError") {
         setError(ERROR_MESSAGES?.TIMEOUT_ERROR || "Request timed out");
       } else {
@@ -102,7 +121,7 @@ export const usePrintGrReport = () => {
           ERROR_MESSAGES?.[err.message] ||
             err.message ||
             ERROR_MESSAGES?.UNKNOWN_ERROR ||
-            "An error occurred during print data fetch"
+            "An error occurred during print PDF generation"
         );
       }
       return { success: false, error: err };

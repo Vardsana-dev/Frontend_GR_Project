@@ -9,9 +9,18 @@ interface ReportTableProps {
   pagination: PaginationInfo | null;
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
+  status?: string;
+  onStatusChange?: (status: string) => void;
 }
 
-export function ReportTable({ data, pagination, onPageChange, onLimitChange }: ReportTableProps) {
+export function ReportTable({ 
+  data, 
+  pagination, 
+  onPageChange, 
+  onLimitChange,
+  status = "all",
+  onStatusChange
+}: ReportTableProps) {
   const formatAmount = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined) return "—";
     return new Intl.NumberFormat("lo-LA", {
@@ -43,9 +52,23 @@ export function ReportTable({ data, pagination, onPageChange, onLimitChange }: R
     <Card className="shadow-sm border-gray-200/60 rounded-2xl overflow-hidden mt-6">
       <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
         <h2 className="text-xl font-bold text-[#1f2937]">ລາຍລະອຽດການກວດຮັບສິນຄ້າ</h2>
-        <div className="text-sm">
-          <span className="text-gray-500">ສະແດງສະເພາະ: </span>
-          <span className="bg-blue-50 text-[#1e40af] px-3 py-1 rounded-md font-medium">ທັງໝົດ ({pagination?.total || data.length})</span>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-500 font-medium">ສະແດງສະເພາະ:</span>
+          {onStatusChange ? (
+            <select
+              value={status || "all"}
+              onChange={(e) => onStatusChange(e.target.value)}
+              className="bg-blue-50 text-[#1e40af] text-sm font-medium px-3 py-1 rounded-md border border-blue-100 outline-none cursor-pointer hover:bg-blue-100 transition-colors"
+            >
+              <option value="all">ທັງໝົດ ({pagination?.total ?? data.length})</option>
+              <option value="COMPLETE">ຄົບຖ້ວນ (COMPLETE)</option>
+              <option value="PARTIAL">ບໍ່ຄົບ (PARTIAL)</option>
+            </select>
+          ) : (
+            <span className="bg-blue-50 text-[#1e40af] px-3 py-1 rounded-md font-medium">
+              ທັງໝົດ ({pagination?.total || data.length})
+            </span>
+          )}
         </div>
       </div>
       
@@ -86,7 +109,7 @@ export function ReportTable({ data, pagination, onPageChange, onLimitChange }: R
               </TableRow>
             ) : (
               data.map((row, idx) => (
-                <TableRow key={row.grid} className="hover:bg-gray-50 border-b border-gray-100">
+                <TableRow key={row.grid || `report-row-${idx}`} className="hover:bg-gray-50 border-b border-gray-100">
                   <TableCell className="text-center text-gray-700">{(pagination?.page ? (pagination.page - 1) * pagination.limit : 0) + idx + 1}</TableCell>
                   <TableCell className="font-semibold text-gray-900">{row.supplier?.apcode}</TableCell>
                   <TableCell className="font-semibold text-[#1e40af]">{row.purchaseOrder?.docno}</TableCell>

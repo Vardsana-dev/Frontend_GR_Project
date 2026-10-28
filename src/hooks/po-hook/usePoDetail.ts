@@ -71,6 +71,9 @@ export interface PoItem {
   orderedQuantity: number;
   grReceivedQty: number;
   remainingQuantity: number;
+  receivedQuantity?: number;
+  receivedQty?: number;
+  [key: string]: any;
 }
 
 export interface PoDetailResponse {

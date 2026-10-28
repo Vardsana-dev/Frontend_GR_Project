@@ -27,19 +27,51 @@ export const useGrList = () => {
 
       // Build query string from params
       const queryParams = new URLSearchParams();
-      if (params.search) queryParams.append("search", params.search);
+      if (params.search && typeof params.search === "string" && params.search.trim()) {
+        queryParams.append("search", params.search.trim());
+      }
       if (params.startDate) queryParams.append("dateFrom", params.startDate);
       if (params.endDate) queryParams.append("dateTo", params.endDate);
-      if (params.supplier && params.supplier !== "ທັງໝົດ" && params.supplier !== "all") queryParams.append("apcode", params.supplier);
-      if (params.status && params.status !== "ທັງໝົດ" && params.status !== "all") queryParams.append("approvalStatus", params.status);
-      if (params.page) queryParams.append("page", params.page.toString());
-      if (params.limit) queryParams.append("limit", params.limit.toString());
+      if (params.supplier && params.supplier !== "ທັງໝົດ" && params.supplier !== "all" && params.supplier !== "ALL") {
+        queryParams.append("apcode", params.supplier);
+      }
+      if (params.status && params.status !== "ທັງໝົດ" && params.status !== "all" && params.status !== "ALL") {
+        const statusMap: Record<string, string> = {
+          "ຮັບແລ້ວ": "RECEIVED",
+          "RECEIVED": "RECEIVED",
+          "ຮ່າງ": "DRAFT",
+          "DRAFT": "DRAFT",
+          "ຍົກເລີກ": "CANCELLED",
+          "CANCELLED": "CANCELLED",
+          "ບໍ່ຢືນຢັນ": "CANCELLED",
+          "ບໍ່ຍືນຢັນ": "CANCELLED",
+        };
+        const mappedStatus = params.status
+          .split(',')
+          .map((s) => statusMap[s.trim()] || s.trim())
+          .join(',');
+        queryParams.append("status", mappedStatus);
+      }
+
+      // Ensure page is a valid positive integer
+      const pageNum = Number(params.page);
+      if (!isNaN(pageNum) && pageNum > 0) {
+        queryParams.append("page", Math.floor(pageNum).toString());
+      } else {
+        queryParams.append("page", "1");
+      }
+
+      // Ensure limit is a valid positive integer
+      const limitNum = Number(params.limit);
+      if (!isNaN(limitNum) && limitNum > 0) {
+        queryParams.append("limit", Math.floor(limitNum).toString());
+      } else {
+        queryParams.append("limit", "10");
+      }
 
       const queryString = queryParams.toString();
       const cleanEndpoint = envEndpoint.endsWith('?') ? envEndpoint.slice(0, -1) : envEndpoint;
       const apiEndpoint = `${apiUrl}${cleanEndpoint}${queryString ? (cleanEndpoint.includes('?') ? '&' : '?') + queryString : ''}`;
-
-      console.log('Fetching GR List from:', apiEndpoint);
 
       const token = getAuthToken();
 

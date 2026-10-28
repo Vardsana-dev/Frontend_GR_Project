@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { ProductDetailView } from '@/components/screens/search_product/ProductDetailView';
 import { AddBarcodeDialog } from '@/components/dialogs/AddBarcodeDialog';
 import { StandardPagination } from '@/components/customs/StandardPagination';
+import { normalizeProductImageUrl } from '@/lib/imageUtils';
 
 export function SearchProductSection() {
   const [search, setSearch] = useState("");
@@ -37,13 +38,13 @@ export function SearchProductSection() {
       <Card className="shadow-sm border-gray-200/60 rounded-2xl">
         <CardContent className="p-6">
           <div className="flex flex-col lg:flex-row items-end justify-between gap-4">
-            
+
             {/* Search Bar */}
             <div className="w-full lg:flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input 
-                className="pl-10 h-12 bg-gray-100/80 border-transparent rounded-full focus-visible:ring-1 focus-visible:ring-gray-300" 
-                placeholder="ຄົ້ນຫາສິນຄ້າ..." 
+              <Input
+                className="pl-10 h-12 bg-gray-100/80 border-transparent rounded-full focus-visible:ring-1 focus-visible:ring-gray-300"
+                placeholder="ຄົ້ນຫາສິນຄ້າ..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -63,14 +64,14 @@ export function SearchProductSection() {
                 </div>
               </div> */}
 
-              <Button 
+              <Button
                 onClick={() => setIsAddBarcodeOpen(true)}
                 className="h-11 px-6 bg-[#1e40af] hover:bg-[#1e3a8a] text-white rounded-lg whitespace-nowrap w-full sm:w-auto"
               >
                 ເພີ່ມບາໂຄດ
               </Button>
             </div>
-            
+
           </div>
         </CardContent>
       </Card>
@@ -81,19 +82,23 @@ export function SearchProductSection() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {items.map((product: any, idx: number) => (
-            <Card 
-              key={product.code || idx} 
+            <Card
+              key={product.code || idx}
               className="shadow-sm border border-gray-100 rounded-2xl overflow-hidden hover:border-gray-200 hover:bg-gray-50/50 transition-colors cursor-pointer"
               onClick={() => setSelectedProduct(product.code)}
             >
               <CardContent className="p-4 flex gap-4">
                 {/* Product Image Placeholder */}
                 <div className="w-32 h-32 shrink-0 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden relative">
-                  {product.imageUrl ? (
-                    <Image src={product.imageUrl} alt={product.nameen || product.nameth} layout="fill" objectFit="cover" unoptimized />
-                  ) : (
-                    <Package className="w-10 h-10 text-gray-300" />
-                  )}
+                  {(() => {
+                    const rawImg = product.imageUrl || product.image || (Array.isArray(product.images) && product.images[0]?.url ? product.images[0].url : product.images?.[0]);
+                    const displayImg = normalizeProductImageUrl(rawImg);
+                    return displayImg ? (
+                      <Image src={displayImg} alt={product.nameen || product.nameth || 'Product'} layout="fill" objectFit="cover" unoptimized />
+                    ) : (
+                      <Package className="w-10 h-10 text-gray-300" />
+                    );
+                  })()}
                 </div>
 
                 {/* Product Details */}
@@ -104,17 +109,17 @@ export function SearchProductSection() {
                   <h3 className="font-bold text-gray-900 text-[15px] leading-tight mb-2 line-clamp-2" title={product.nameen || product.nameth}>
                     {product.nameen || product.nameth}
                   </h3>
-                  
+
                   <div className="bg-gray-50 text-gray-600 text-sm px-3 py-1.5 rounded-md w-full truncate">
                     Barcode {product.primaryBarcode || product.code}
                   </div>
-                  
+
                   {product.barcodeCount > 1 && (
                     <div className="text-blue-600 text-sm font-medium mt-1 hover:underline cursor-pointer inline-block">
                       +{product.barcodeCount - 1} Barcode
                     </div>
                   )}
-                  
+
                   <div className="text-gray-400 text-sm mt-1">
                     ຫົວໜ່ວຍ ({product.stockunit || '-'})
                   </div>
@@ -144,9 +149,12 @@ export function SearchProductSection() {
       )}
 
       {/* Add Barcode Dialog */}
-      <AddBarcodeDialog 
-        isOpen={isAddBarcodeOpen} 
-        onClose={() => setIsAddBarcodeOpen(false)} 
+      <AddBarcodeDialog
+        isOpen={isAddBarcodeOpen}
+        onClose={() => setIsAddBarcodeOpen(false)}
+        onSuccess={() => {
+          fetchProductList({ search, page, limit });
+        }}
       />
 
     </div>

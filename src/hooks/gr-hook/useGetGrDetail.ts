@@ -7,24 +7,59 @@ export const useGetGrDetail = () => {
   const [error, setError] = useState("");
   const [data, setData] = useState<any>(null);
 
-  const fetchGrDetail = useCallback(async (grcode: string) => {
+  const fetchGrDetail = useCallback(async (identifier: string) => {
+    if (!identifier) return { success: false, error: "No identifier provided" };
     setLoading(true);
     setError("");
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API || "";
       const envEndpoint = process.env.NEXT_PUBLIC_GR_DETAIL || "";
-      
+      const token = getAuthToken();
+
+      let targetGrid = String(identifier).trim();
+
+      // If the identifier is a document code (e.g. "GR13261015-0009") or PO number instead of a numeric ID,
+      // search for the draft GR record to retrieve its numeric grid ID
+      if (!/^\d+$/.test(targetGrid)) {
+        try {
+          const listEndpoint = process.env.NEXT_PUBLIC_GET_ALL_GR || "/api/gr";
+          const searchUrl = `${apiUrl}${listEndpoint}?search=${encodeURIComponent(targetGrid)}`;
+          const searchRes = await fetch(searchUrl, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+
+          if (searchRes.ok) {
+            const listData = await searchRes.json();
+            const items = Array.isArray(listData)
+              ? listData
+              : (listData?.items || listData?.data || listData?.rows || []);
+
+            const matched = items.find((it: any) =>
+              String(it.grcode || it.docno || it.grNumber || '').toUpperCase() === targetGrid.toUpperCase() ||
+              String(it.purchaseOrder?.docno || it.pocode || it.poNumber || '').toUpperCase() === targetGrid.toUpperCase()
+            ) || items[0];
+
+            if (matched && (matched.grid !== undefined && matched.grid !== null || matched.id)) {
+              targetGrid = String(matched.grid ?? matched.id);
+            }
+          }
+        } catch (searchErr) {
+          console.warn("Could not resolve grcode to grid via search:", searchErr);
+        }
+      }
+
       const queryParams = new URLSearchParams();
-      if (grcode) {
-        // Updated to use 'grid' as per the flow instructions
-        queryParams.append("grid", grcode);
+      if (targetGrid) {
+        queryParams.append("grid", targetGrid);
       }
 
       const queryString = queryParams.toString();
       const apiEndpoint = `${apiUrl}${envEndpoint}${queryString ? (envEndpoint.includes('?') ? (envEndpoint.endsWith('?') ? '' : '&') : '?') + queryString : ''}`;
-
-      const token = getAuthToken();
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);

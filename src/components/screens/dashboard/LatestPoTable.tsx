@@ -3,24 +3,22 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DashboardSummaryResponse } from '@/hooks/dashboard-hook/useDashboardSummary';
+import { formatCurrency } from '@/lib/currency';
 
 export function LatestPoTable({ latestPos = [] }: { latestPos?: DashboardSummaryResponse['latestPurchaseOrders'] }) {
-  const formatAmount = (amount: any) => {
-    if (typeof amount === 'number') {
-      return new Intl.NumberFormat('lo-LA', {
-        style: 'currency',
-        currency: 'LAK',
-        maximumFractionDigits: 0
-      }).format(amount);
-    }
-    return amount;
+  const formatAmount = (amount: any, currencyCode?: string) => {
+    return formatCurrency(amount, currencyCode);
   };
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "GR ຮັບເຂົ້າແລ້ວ": return "bg-green-100 text-green-700";
-      case "GR ຍັງບໍ່ທັນຮັບເຂົ້າ": return "bg-blue-100 text-blue-700";
+      case "GR ຮັບເຂົ້າແລ້ວ":
+      case "RECEIVED": return "bg-green-100 text-green-700";
+      case "GR ຍັງບໍ່ທັນຮັບເຂົ້າ":
+      case "NOT_RECEIVED":
       case "ລໍຖ້າຮັບເຂົ້າ": return "bg-blue-100 text-blue-700"; // Based on image
-      case "GR ຮັບເຂົ້າບາງສ່ວນ": return "bg-pink-100 text-pink-700";
+      case "GR ຮັບເຂົ້າບາງສ່ວນ":
+      case "PARTIALLY_RECEIVED":
+      case "PARTIAL":
       case "ຮັບບາງສ່ວນ": return "bg-pink-100 text-pink-700"; // Based on image
       default: return "bg-blue-100 text-blue-700"; // Defaulting to blue for unmatched pending-like states
     }
@@ -52,7 +50,7 @@ export function LatestPoTable({ latestPos = [] }: { latestPos?: DashboardSummary
                   <TableCell className="text-gray-500">{po.apname}</TableCell>
                   <TableCell className="text-gray-500">{po.docdate}</TableCell>
                   <TableCell className="text-center text-gray-500">{po.itemCount}</TableCell>
-                  <TableCell className="text-right font-bold text-gray-900">{formatAmount(po.totalAmount || po.amount)}</TableCell>
+                  <TableCell className="text-right font-bold text-gray-900">{formatAmount(po.totalAmount ?? po.amount, po.currencyCode)}</TableCell>
                   <TableCell className="text-center">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${getStatusColor(po.grStatus)}`}>
                       {po.grStatus}

@@ -1,12 +1,16 @@
 import React from 'react';
 import { GoodsReceiptSection } from '@/components/screens/goods_receipt/GoodsReceiptSection';
 
+export const metadata = {
+  title: "ຮັບສິນຄ້າ - GR System",
+  description: "ຮັບສິນຄ້າ (Goods Receipt)",
+};
+
 export default function GoodsReceiptPage() {
   return (
-    <div className="flex flex-col h-full bg-slate-50 min-h-screen">
-      <div className="p-6">
-        <GoodsReceiptSection />
-      </div>
+    <div className="pb-8">
+      <GoodsReceiptSection />
     </div>
   );
 }
+

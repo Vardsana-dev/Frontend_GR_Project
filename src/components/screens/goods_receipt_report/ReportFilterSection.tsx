@@ -8,6 +8,7 @@ export interface ReportFilters {
   startDate: string;
   endDate: string;
   apcode: string;
+  status?: string;
 }
 
 interface ReportFilterSectionProps {
