@@ -34,11 +34,12 @@ export function StandardPagination({
     if (!onLimitChange) return;
     const parsed = parseInt(rawVal, 10);
     if (isNaN(parsed) || parsed < 1) {
-      setLimitInput("10");
-      onLimitChange(10);
+      setLimitInput(String(limit || 10));
     } else {
       setLimitInput(String(parsed));
-      onLimitChange(parsed);
+      if (parsed !== limit) {
+        onLimitChange(parsed);
+      }
     }
   };
 
@@ -71,17 +72,13 @@ export function StandardPagination({
             min={1}
             value={limitInput}
             onChange={(e) => {
-              const val = e.target.value;
-              setLimitInput(val);
-              const parsed = parseInt(val, 10);
-              if (!isNaN(parsed) && parsed >= 1 && onLimitChange) {
-                onLimitChange(parsed);
-              }
+              setLimitInput(e.target.value);
             }}
             onBlur={() => commitLimit(limitInput)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 commitLimit(limitInput);
+                (e.target as HTMLInputElement).blur();
               }
             }}
             className="w-16 h-8 text-center text-gray-700 bg-white border-gray-200 rounded-md font-normal shadow-none focus-visible:ring-1 focus-visible:ring-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"

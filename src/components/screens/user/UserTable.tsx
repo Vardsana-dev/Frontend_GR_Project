@@ -27,7 +27,7 @@ export function UserTable({ data }: { data: UserItem[] }) {
           </TableHeader>
           <TableBody>
             {paginatedData.map((user, idx) => (
-              <TableRow key={user.id} className="hover:bg-gray-50 border-b border-gray-100">
+              <TableRow key={user.id || `user-${idx}`} className="hover:bg-gray-50 border-b border-gray-100">
                 <TableCell className="text-center text-gray-500 py-4">{(page - 1) * limit + idx + 1}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">

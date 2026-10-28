@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { getAuthToken } from "@/lib/auth";
+import { getAuthToken, getSelectedApiUrl } from "@/lib/auth";
 import { ERROR_MESSAGES } from "@/constants";
 
 export interface SetGrQuantityPayload {
@@ -18,7 +18,7 @@ export const useSetGrQuantity = () => {
     setError("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API || "";
+      const apiUrl = process.env.NEXT_PUBLIC_API || getSelectedApiUrl() || "";
       let envEndpoint = process.env.NEXT_PUBLIC_PUT_SET_GR_QUANTITY || "";
       
       // Replace placeholders

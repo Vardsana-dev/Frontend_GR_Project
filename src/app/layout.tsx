@@ -4,9 +4,9 @@ import "./globals.css";
 export const metadata = {
   title: "GR System",
   icons: {
-    icon: 'csc-items/CSC LOGO.png',
-    shortcut: 'csc-items/CSC LOGO.png',
-    apple: 'csc-items/CSC LOGO.png'
+    icon: '/csc-items/CSC LOGO.png',
+    shortcut: '/csc-items/CSC LOGO.png',
+    apple: '/csc-items/CSC LOGO.png'
   }
 };
 

@@ -10,12 +10,21 @@ export interface DashboardSummaryResponse {
     pendingReceipt: number;
     pendingApproval: number;
     received: number;
+    receivedToday?: number;
+    openGrDrafts?: number;
+    lastReceivedAt?: string | null;
+  };
+  receiptProgress?: {
+    received: number;
+    pending: number;
+    overdue: number;
   };
   statusBreakdown: Record<string, number>;
   topSuppliers: Array<{
     apcode: string;
     apname: string;
     totalAmount: number;
+    currencyCode?: string;
   }>;
   latestPurchaseOrders: Array<{
     docno: string;
@@ -25,6 +34,9 @@ export interface DashboardSummaryResponse {
     shipdate: string;
     itemCount: number;
     grStatus: string;
+    totalAmount?: number;
+    amount?: number;
+    currencyCode?: string;
   }>;
 }
 

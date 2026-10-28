@@ -45,7 +45,7 @@ export function FlowCard({ flow, onEdit }: FlowCardProps) {
       <div className="flex items-center flex-wrap gap-3">
         {flow.levels && flow.levels.length > 0 ? (
           flow.levels.map((level: any, index: number) => (
-            <React.Fragment key={level.stepId}>
+            <React.Fragment key={level.stepId || `level-${index}`}>
               {/* Step */}
               <div className="bg-[#f1f5f9] text-[#334155] px-4 py-2 rounded-lg text-sm font-semibold">
                 {level.stepName}

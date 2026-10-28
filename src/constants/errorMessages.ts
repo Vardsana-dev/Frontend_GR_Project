@@ -30,3 +30,43 @@ export const ERROR_MESSAGES = {
     DELETE_ERROR: 'ເກີດຂໍ້ຜິດພາດໃນການລຶບຂໍ້ມູນ',
     NOT_FOUND: 'ບໍ່ພົບຂໍ້ມູນທີ່ຕ້ອງການ',
 }
+
+/**
+ * ແປຂໍ້ຄວາມ Error ຈາກ Backend ໃຫ້ເປັນພາສາລາວ
+ */
+export const translateApiError = (msg: string): string => {
+    if (!msg || typeof msg !== 'string') return ERROR_MESSAGES.UNKNOWN_ERROR;
+
+    // Pattern: "Purchase order has an open GR draft (GR...). Receive it before creating a new GR"
+    const draftMatch = msg.match(/Purchase order has an open GR draft\s*\(([^)]+)\)\.?\s*Receive it before creating a new GR/i);
+    if (draftMatch) {
+        const grCode = draftMatch[1];
+        return `ໃບສັ່ງຊື້ (PO) ນີ້ມີໃບຮັບສິນຄ້າສະຖານະຮ່າງ (${grCode}) ທີ່ຍັງຄ້າງຢູ່. ກະລຸນາຮັບສິນຄ້າໃຫ້ສຳເລັດກ່ອນສ້າງໃບຮັບໃໝ່.`;
+    }
+
+    if (/Purchase order has an open GR draft/i.test(msg)) {
+        return 'ໃບສັ່ງຊື້ (PO) ນີ້ມີໃບຮັບສິນຄ້າສະຖານະຮ່າງທີ່ຍັງຄ້າງຢູ່. ກະລຸນາຮັບສິນຄ້າໃຫ້ສຳເລັດກ່ອນສ້າງໃບຮັບໃໝ່.';
+    }
+
+    if (/all items.*already received/i.test(msg) || /already fully received/i.test(msg)) {
+        return 'ສິນຄ້າທັງໝົດໃນໃບສັ່ງຊື້ (PO) ນີ້ຖືກຮັບເຂົ້າຄົບຖ້ວນແລ້ວ.';
+    }
+
+    if (/Purchase order.*not found/i.test(msg)) {
+        return 'ບໍ່ພົບຂໍ້ມູນໃບສັ່ງຊື້ (PO) ນີ້ໃນລະບົບ.';
+    }
+
+    if (/already exists/i.test(msg) || /conflict/i.test(msg)) {
+        return 'ຂໍ້ມູນຊ້ຳຊ້ອນ ຫຼື ໃບຮັບສິນຄ້ານີ້ມີຢູ່ໃນລະບົບແລ້ວ.';
+    }
+
+    if (/timeout/i.test(msg) || /aborted/i.test(msg)) {
+        return ERROR_MESSAGES.TIMEOUT_ERROR;
+    }
+
+    if ((ERROR_MESSAGES as Record<string, string>)[msg]) {
+        return (ERROR_MESSAGES as Record<string, string>)[msg];
+    }
+
+    return msg;
+};

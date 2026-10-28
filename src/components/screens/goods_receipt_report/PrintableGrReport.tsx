@@ -266,7 +266,7 @@ export const PrintableGrReport = React.forwardRef<
                 </thead>
                 <tbody>
                   {pageData.map((row, index) => (
-                    <tr key={row.grid}>
+                    <tr key={row.grid || `print-row-${index}`}>
                       <td className="border border-black p-1 text-center">{startRowIndex + index + 1}</td>
                       <td className="border border-black p-1 text-center text-[10px] break-all">{row.supplier?.apcode}</td>
                       <td className="border border-black p-1 truncate max-w-[10rem]">{row.supplier?.apname}</td>

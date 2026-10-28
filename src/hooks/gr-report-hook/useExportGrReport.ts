@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { getAuthToken } from "@/lib/auth";
+import { getAuthToken, getSelectedApiUrl } from "@/lib/auth";
 import { ERROR_MESSAGES } from "@/constants";
 import { GrReportResponse, GrReportItem } from "./useGetGrReport";
 
@@ -7,6 +7,9 @@ export interface ExportGrReportParams {
   search?: string;
   startDate?: string;
   endDate?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  status?: string;
   receiptStatus?: string;
   apcode?: string;
 }
@@ -20,26 +23,36 @@ export const useExportGrReport = () => {
     setError("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API || "";
-      const envEndpointRaw = process.env.NEXT_PUBLIC_EXPORT_GR_REPORT || "";
+      const apiUrl = process.env.NEXT_PUBLIC_API || getSelectedApiUrl() || "";
+      const base = (apiUrl || "").replace(/\/+$/, "");
+      const envEndpointRaw = process.env.NEXT_PUBLIC_EXPORT_GR_REPORT || "/api/gr/report/export";
       const envEndpoint = envEndpointRaw.split('?')[0]; 
+      const path = envEndpoint.startsWith("/") ? envEndpoint : `/${envEndpoint}`;
       
       const buildQueryParams = () => {
         const queryParams = new URLSearchParams();
-        if (params.search) queryParams.append("search", params.search);
-        if (params.startDate) {
-          queryParams.append("startDate", params.startDate);
-          queryParams.append("dateFrom", params.startDate);
+        if (params.search && params.search.trim()) queryParams.append("search", params.search.trim());
+        
+        const dateFrom = params.dateFrom || params.startDate;
+        if (dateFrom && dateFrom.trim()) {
+          queryParams.append("dateFrom", dateFrom.trim());
+          queryParams.append("startDate", dateFrom.trim());
         }
-        if (params.endDate) {
-          queryParams.append("endDate", params.endDate);
-          queryParams.append("dateTo", params.endDate);
+        
+        const dateTo = params.dateTo || params.endDate;
+        if (dateTo && dateTo.trim()) {
+          queryParams.append("dateTo", dateTo.trim());
+          queryParams.append("endDate", dateTo.trim());
         }
-        if (params.receiptStatus && params.receiptStatus !== "ທັງໝົດ" && params.receiptStatus !== "all") {
-          queryParams.append("receiptStatus", params.receiptStatus);
+        
+        const status = params.status || params.receiptStatus;
+        if (status && status !== "ທັງໝົດ" && status !== "all") {
+          queryParams.append("status", status.trim());
+          queryParams.append("receiptStatus", status.trim());
         }
+        
         if (params.apcode && params.apcode !== "ທັງໝົດ" && params.apcode !== "all") {
-          queryParams.append("apcode", params.apcode);
+          queryParams.append("apcode", params.apcode.trim());
         }
         return queryParams.toString();
       };
@@ -50,7 +63,7 @@ export const useExportGrReport = () => {
       };
 
       const queryString = buildQueryParams();
-      const apiEndpoint = `${apiUrl}${envEndpoint}${queryString ? `?${queryString}` : ''}`;
+      const apiEndpoint = `${base}${path}${queryString ? `?${queryString}` : ''}`;
       
       const response = await fetch(apiEndpoint, {
         method: "GET",

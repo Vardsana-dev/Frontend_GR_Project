@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { getAuthToken } from "@/lib/auth";
+import { getAuthToken, getSelectedApiUrl } from "@/lib/auth";
 import { ERROR_MESSAGES } from "@/constants";
 
 export const useUploadDamageEvidencePhoto = () => {
@@ -12,10 +12,11 @@ export const useUploadDamageEvidencePhoto = () => {
     setError("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API || "";
+      const apiUrl = process.env.NEXT_PUBLIC_API || getSelectedApiUrl() || "";
+      const base = (apiUrl || "").replace(/\/+$/, "");
       const envEndpoint = process.env.NEXT_PUBLIC_UPLOAD_DAMAGE_EVIDENCE_PHOTO || "";
       
-      const apiEndpoint = `${apiUrl}${envEndpoint}`;
+      const apiEndpoint = `${base}${envEndpoint}`;
       const token = getAuthToken();
 
       const formData = new FormData();

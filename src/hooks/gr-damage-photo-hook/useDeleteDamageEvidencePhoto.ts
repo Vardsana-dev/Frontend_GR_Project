@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { getAuthToken } from "@/lib/auth";
+import { getAuthToken, getSelectedApiUrl } from "@/lib/auth";
 import { ERROR_MESSAGES } from "@/constants";
 
 export const useDeleteDamageEvidencePhoto = () => {
@@ -12,7 +12,8 @@ export const useDeleteDamageEvidencePhoto = () => {
     setError("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API || "";
+      const apiUrl = process.env.NEXT_PUBLIC_API || getSelectedApiUrl() || "";
+      const base = (apiUrl || "").replace(/\/+$/, "");
       let envEndpoint = process.env.NEXT_PUBLIC_DELETE_DAMAGE_EVIDENCE_PHOTO || "";
       
       if (envEndpoint.includes("{{")) {
@@ -22,7 +23,7 @@ export const useDeleteDamageEvidencePhoto = () => {
         envEndpoint = `${envEndpoint}${separator}attachmentId=${attachmentId}`;
       }
       
-      const apiEndpoint = `${apiUrl}${envEndpoint}`;
+      const apiEndpoint = `${base}${envEndpoint}`;
       const token = getAuthToken();
 
       const controller = new AbortController();

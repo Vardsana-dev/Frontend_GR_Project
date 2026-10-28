@@ -2,13 +2,15 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PackageOpen, FileText, Banknote, ClipboardList } from "lucide-react";
 import { GrReportSummary } from "@/hooks/gr-report-hook/useGetGrReport";
+import { normalizeCurrency } from "@/lib/currency";
 
 export function ReportSummaryCards({ data }: { data: GrReportSummary | null }) {
+  const baseCurrency = normalizeCurrency(data?.baseCurrency || "LAK");
   const formatAmount = (amount: number | null | undefined) => {
-    if (amount === null || amount === undefined) return "0₭";
-    return new Intl.NumberFormat("lo-LA", {
+    if (amount === null || amount === undefined) return `${baseCurrency} 0`;
+    return `${baseCurrency} ${new Intl.NumberFormat("en-US", {
       maximumFractionDigits: 0,
-    }).format(amount) + "₭";
+    }).format(amount)}`;
   };
 
   return (
@@ -60,7 +62,11 @@ export function ReportSummaryCards({ data }: { data: GrReportSummary | null }) {
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-500 mb-1">ຈຳນວນ PO</p>
-            <h3 className="text-2xl font-bold text-[#1e3a8a]">{formatAmount(data?.poCount)}</h3>
+            <h3 className="text-2xl font-bold text-[#1e3a8a]">
+              {data?.poCount !== undefined && data?.poCount !== null
+                ? data.poCount.toLocaleString()
+                : "0"}
+            </h3>
           </div>
         </CardContent>
       </Card>

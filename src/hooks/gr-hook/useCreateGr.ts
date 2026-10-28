@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { getAuthToken } from "@/lib/auth";
-import { ERROR_MESSAGES } from "@/constants";
+import { ERROR_MESSAGES, translateApiError } from "@/constants";
 
 export interface CreateGrPayload {
   pocode: string;
@@ -56,12 +56,67 @@ export const useCreateGr = () => {
         
         console.error(`Create GR Error (${response.status}):`, errorText);
         
-        const errorMessage = 
+        const rawMessage = 
           errorData.message || 
           errorData.error || 
           (response.status === 409 ? "ຂໍ້ມູນຊ້ຳຊ້ອນ (Conflict) ຫຼື ໃບຮັບສິນຄ້ານີ້ມີຢູ່ແລ້ວ" : "CREATE_GR_ERROR");
           
-        throw new Error(errorMessage);
+        const translatedMessage = translateApiError(rawMessage);
+        const errObj: any = new Error(translatedMessage);
+        const draftMatch = String(rawMessage).match(/open GR draft\s*\(([^)]+)\)/i) || 
+                           String(rawMessage).match(/\((GR[^)]+)\)/i) ||
+                           String(rawMessage).match(/(GR\d{6,}-\d+)/i) ||
+                           String(rawMessage).match(/(GR[A-Za-z0-9-]+)/i);
+        const isErrorCode = (val: any): boolean => {
+          if (!val || typeof val !== 'string') return false;
+          const s = val.trim();
+          if (
+            s.toUpperCase().includes('EXPIRED') ||
+            s.toUpperCase().includes('ERROR') ||
+            s.toUpperCase().includes('FAILED') ||
+            s.toUpperCase().includes('INVALID') ||
+            s.toUpperCase().includes('NOT_FOUND') ||
+            s.toUpperCase().includes('UNAUTHORIZED') ||
+            s.toUpperCase().includes('FORBIDDEN') ||
+            s.toUpperCase().includes('CONFLICT') ||
+            s.toUpperCase().includes('TIMEOUT')
+          ) return true;
+          if (/^[A-Z0-9]+_[A-Z0-9_]+$/.test(s) && !s.startsWith('GR')) return true;
+          return false;
+        };
+
+        const candidateGrCode = 
+          (draftMatch ? draftMatch[1].trim() : null) ||
+          errorData?.grcode ||
+          errorData?.grCode ||
+          errorData?.data?.grcode ||
+          errorData?.record?.grcode ||
+          errorData?.record?.code ||
+          errorData?.data?.record?.code ||
+          null;
+
+        const candidateGrid = 
+          errorData?.grid ||
+          errorData?.grId ||
+          errorData?.data?.grid ||
+          errorData?.data?.grId ||
+          errorData?.record?.grid ||
+          errorData?.record?.id ||
+          errorData?.data?.record?.grid ||
+          null;
+
+        const resolvedGrCode = (candidateGrCode && !isErrorCode(String(candidateGrCode)) && String(candidateGrCode).trim().toUpperCase() !== payload.pocode.toUpperCase())
+          ? String(candidateGrCode).trim() 
+          : null;
+
+        const resolvedGrid = candidateGrid 
+          ? String(candidateGrid).trim()
+          : (resolvedGrCode && /^\d+$/.test(resolvedGrCode) ? resolvedGrCode : null);
+
+        errObj.draftGrCode = resolvedGrCode;
+        errObj.grid = resolvedGrid ? String(resolvedGrid) : null;
+        errObj.errorData = errorData;
+        throw errObj;
       }
 
       const result = await response.json();
@@ -71,14 +126,16 @@ export const useCreateGr = () => {
       if (err.name === "AbortError") {
         setError(ERROR_MESSAGES?.TIMEOUT_ERROR || "Request timed out");
       } else {
-        setError(
-          ERROR_MESSAGES?.[err.message] ||
-            err.message ||
-            ERROR_MESSAGES?.UNKNOWN_ERROR ||
-            "An error occurred"
-        );
+        const translated = translateApiError(err.message);
+        setError(translated);
       }
-      return { success: false, error: err };
+      return { 
+        success: false, 
+        error: err, 
+        draftGrCode: err.draftGrCode || null,
+        grid: err.grid || null,
+        errorData: err.errorData || (err as any)?.errorData 
+      };
     } finally {
       setLoading(false);
     }

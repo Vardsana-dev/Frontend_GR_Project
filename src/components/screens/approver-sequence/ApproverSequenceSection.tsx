@@ -51,9 +51,9 @@ export function ApproverSequenceSection() {
       {/* List of Sequence Cards */}
       {!loading && !error && data?.items && data.items.length > 0 && (
         <div className="flex flex-col gap-4">
-          {data.items.map((flow) => (
+          {data.items.map((flow, idx) => (
             <FlowCard 
-              key={flow.flowId} 
+              key={flow.flowId || `flow-${idx}`} 
               flow={flow} 
               onEdit={(id) => router.push(`?action=edit&id=${id}`)} 
             />

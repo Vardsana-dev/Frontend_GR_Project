@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft } from 'lucide-react';
 import { useReceiveGr } from '@/hooks/gr-hook/useReceiveGr';
+import { normalizeCurrency } from '@/lib/currency';
 
 interface ConfirmSaveGrModalProps {
   isOpen: boolean;
@@ -21,29 +22,34 @@ export function ConfirmSaveGrModal({
   onConfirm, 
   totalAmount = "769", 
   grid,
-  currencyCode = "THB",
-  initialExchangeRate = 1
+  currencyCode = "LAK",
+  initialExchangeRate
 }: ConfirmSaveGrModalProps) {
-  const [exchangeRate, setExchangeRate] = useState<string>(String(initialExchangeRate || 1));
+  const isLak = normalizeCurrency(currencyCode) === "LAK";
+
+  const getInitialRate = React.useCallback(() => {
+    if (isLak) {
+      if (initialExchangeRate !== undefined && initialExchangeRate !== null && initialExchangeRate !== "" && Number(initialExchangeRate) !== 1) {
+        return String(initialExchangeRate);
+      }
+      return "0";
+    }
+    if (initialExchangeRate !== undefined && initialExchangeRate !== null && initialExchangeRate !== "") {
+      return String(initialExchangeRate);
+    }
+    return "1";
+  }, [isLak, initialExchangeRate]);
+
+  const [exchangeRate, setExchangeRate] = useState<string>(getInitialRate());
   const [isManualInput, setIsManualInput] = useState<boolean>(false);
   const { receiveGr, loading } = useReceiveGr();
 
   React.useEffect(() => {
     if (isOpen) {
-      setExchangeRate(String(initialExchangeRate || 1));
+      setExchangeRate(getInitialRate());
       setIsManualInput(false);
     }
-  }, [isOpen, initialExchangeRate]);
-
-  const getCurrencySymbol = (code: string) => {
-    switch (code?.toUpperCase()) {
-      case 'THB': return '฿';
-      case 'USD': return '$';
-      case 'LAK':
-      case 'KIP': return '₭';
-      default: return code ? `${code} ` : '$ ';
-    }
-  };
+  }, [isOpen, getInitialRate]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -109,7 +115,7 @@ export function ConfirmSaveGrModal({
           <div className="flex items-center justify-between bg-[#f8f9fa] rounded-xl px-5 py-4 mt-2">
             <span className="text-gray-500 font-medium text-sm">ຍອດລວມ</span>
             <span className="text-gray-900 font-black text-xl">
-              {getCurrencySymbol(currencyCode)} {totalAmount}
+              {normalizeCurrency(currencyCode)} {totalAmount}
             </span>
           </div>
 
@@ -127,7 +133,8 @@ export function ConfirmSaveGrModal({
           <Button 
             onClick={async () => {
               if (grid) {
-                const numericRate = parseFloat(exchangeRate) || 1;
+                const parsed = parseFloat(exchangeRate);
+                const numericRate = isNaN(parsed) ? (isLak ? 0 : 1) : parsed;
                 const res = await receiveGr({ grid, exchangeRate: numericRate });
                 if (res.success) {
                   if(onConfirm) onConfirm();

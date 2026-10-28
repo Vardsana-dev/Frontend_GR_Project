@@ -10,11 +10,11 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { CreateGoodsReceiptModal } from './CreateGoodsReceiptModal';
 import { usePoDetail } from '@/hooks/po-hook/usePoDetail';
+import { normalizeCurrency } from '@/lib/currency';
 
 export function PoDetailSection({ poNumber }: { poNumber: string }) {
   const searchParams = useSearchParams();
-  const statusParam = searchParams.get('status') || 'ລໍຖ້າດຳເນີນການ';
-  const statusColor = statusParam === 'ຮັບບາງສ່ວນ' ? 'bg-pink-100 text-pink-700' : 'bg-blue-50 text-[#244195]';
+  const rawStatusParam = searchParams.get('status') || '';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data, loading, error, fetchPoDetail } = usePoDetail();
@@ -35,7 +35,67 @@ export function PoDetailSection({ poNumber }: { poNumber: string }) {
   if (!data) return <div className="p-10 text-center text-gray-500 font-medium">ບໍ່ພົບຂໍ້ມູນ PO ນີ້</div>;
 
   const { header, items } = data;
-  const ccy = header?.amounts?.currencyCode === 'KIP' ? '₭' : (header?.amounts?.currencyCode === 'THB' ? '฿' : (header?.amounts?.currencyCode || ''));
+  const ccy = normalizeCurrency(header?.amounts?.currencyCode);
+
+  // Calculate receiving status: ຮັບແລ້ວ, ຮັບເຂົ້າບາງສ່ວນ, or ລໍຖ້າຮັບ
+  const getReceivingStatus = () => {
+    // 1. Check if backend explicit grStatus / receiptStatus exists on detail
+    const explicitStatus = header?.grStatus || header?.document?.grStatus || data?.grStatus || header?.receiptStatus;
+    if (explicitStatus) {
+      const s = String(explicitStatus).toUpperCase();
+      if (s.includes('ບາງສ່ວນ') || s.includes('PARTIAL')) return 'ຮັບເຂົ້າບາງສ່ວນ';
+      if (s.includes('ຮັບເຂົ້າແລ້ວ') || s.includes('ຮັບແລ້ວ') || s === 'RECEIVED' || s === 'COMPLETED') return 'ຮັບແລ້ວ';
+      if (s.includes('ຍັງບໍ່ທັນ') || s.includes('ລໍຖ້າ') || s === 'PENDING' || s === 'UNRECEIVED' || s.includes('NOT_RECEIVED')) return 'ຍັງບໍ່ທັນຮັບເຂົ້າ';
+    }
+
+    // 2. Check statusParam from URL query (passed from search PO list)
+    if (rawStatusParam) {
+      const s = rawStatusParam.toUpperCase();
+      if (s.includes('ບາງສ່ວນ') || s.includes('PARTIAL')) return 'ຮັບເຂົ້າບາງສ່ວນ';
+      if (s.includes('ຮັບເຂົ້າແລ້ວ') || s.includes('ຮັບແລ້ວ') || s === 'RECEIVED' || s === 'COMPLETED') return 'ຮັບແລ້ວ';
+      if (s.includes('ຍັງບໍ່ທັນ') || s.includes('ລໍຖ້າ') || s === 'PENDING' || s === 'UNRECEIVED' || s.includes('NOT_RECEIVED')) return 'ຍັງບໍ່ທັນຮັບເຂົ້າ';
+    }
+
+    // 3. Check item receiving quantities if items exist and have receiving data
+    if (items && items.length > 0) {
+      let totalOrdered = 0;
+      let totalReceived = 0;
+      let hasReceivedData = false;
+
+      for (const it of items) {
+        const ordered = Number(it.orderedQuantity ?? it.quantity ?? 0);
+        const received = Number(it.grReceivedQty ?? it.receivedQuantity ?? it.receivedQty ?? 0);
+        totalOrdered += ordered;
+        totalReceived += received;
+
+        if (it.grReceivedQty !== undefined || it.receivedQuantity !== undefined || it.receivedQty !== undefined) {
+          hasReceivedData = true;
+        }
+      }
+
+      if (hasReceivedData && totalOrdered > 0) {
+        if (totalReceived >= totalOrdered) return 'ຮັບແລ້ວ';
+        if (totalReceived > 0) return 'ຮັບເຂົ້າບາງສ່ວນ';
+        return 'ລໍຖ້າຮັບ';
+      }
+    }
+
+    return 'ລໍຖ້າຮັບ';
+  };
+
+  const currentStatus = getReceivingStatus();
+
+  const getBadgeStyle = (status: string) => {
+    switch (status) {
+      case 'ຮັບແລ້ວ':
+        return 'bg-green-100 text-green-700';
+      case 'ຮັບເຂົ້າບາງສ່ວນ':
+        return 'bg-pink-100 text-pink-700';
+      case 'ລໍຖ້າຮັບ':
+      default:
+        return 'bg-yellow-100 text-yellow-700';
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 w-full relative">
@@ -47,8 +107,8 @@ export function PoDetailSection({ poNumber }: { poNumber: string }) {
         </Link>
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-[#244195]">{header?.document?.docno || poNumber}</h1>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusColor}`}>
-            {header?.document?.statusapprove || statusParam}
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getBadgeStyle(currentStatus)}`}>
+            {currentStatus}
           </span>
         </div>
         <Button 
@@ -122,6 +182,7 @@ export function PoDetailSection({ poNumber }: { poNumber: string }) {
                   <TableHead className="text-white bg-transparent text-center font-semibold border-r border-white/20">ຫົວໜ່ວຍ</TableHead>
                   <TableHead className="text-white bg-transparent text-center font-semibold border-r border-white/20">ລາຄາຊື້ / ໜ່ວຍ</TableHead>
                   <TableHead className="text-white bg-transparent text-center font-semibold border-r border-white/20">ສ່ວນຫຼຸດ</TableHead>
+                  <TableHead className="text-white bg-transparent text-center font-semibold border-r border-white/20">ຍັງຄົງເຫຼືອ</TableHead>
                   <TableHead className="text-white bg-transparent text-center font-semibold">ຈຳນວນເງິນ</TableHead>
                 </TableRow>
               </TableHeader>
@@ -129,29 +190,32 @@ export function PoDetailSection({ poNumber }: { poNumber: string }) {
                 {items?.map((row, idx) => (
                   <TableRow key={idx} className="bg-white border-b-gray-100 last:border-b-0">
                     <TableCell className="text-center font-bold text-gray-900 border-r border-gray-100">{String(idx + 1).padStart(2, '0')}</TableCell>
-                    <TableCell className="text-center border-r border-gray-100">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-16 h-16 bg-white rounded border border-gray-100 flex items-center justify-center p-1 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                           <Image src={row.imageUrl || "https://placehold.co/100x100?text=Product"} unoptimized alt="product" width={64} height={64} className="object-contain" />
-                        </div>
-                      </div>
+                    <TableCell className="text-center font-bold text-gray-900 border-r border-gray-100">
+                      {row.productcode || '-'}
                     </TableCell>
                     <TableCell className="border-r border-gray-100">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-gray-900 mb-1">{row.productcode}</span>
-                        <span className="text-gray-500 text-sm leading-snug">{row.productname}</span>
-                      </div>
+                      <span className="text-gray-500 text-sm leading-snug">{row.productname || '-'}</span>
                     </TableCell>
                     <TableCell className="text-center font-bold text-gray-900 border-r border-gray-100">{formatCurrency(row.quantity)}</TableCell>
                     <TableCell className="text-center font-bold text-gray-900 border-r border-gray-100">{row.unitcode}</TableCell>
                     <TableCell className="text-center font-bold text-gray-900 border-r border-gray-100">{formatCurrency(row.unitprice)}</TableCell>
                     <TableCell className="text-center font-bold text-gray-900 border-r border-gray-100">{formatCurrency(row.discamount)}</TableCell>
+                    <TableCell className="text-center font-bold text-gray-900 border-r border-gray-100">
+                      {formatCurrency(
+                        row.remainingQuantity ??
+                        (row as any).quantities?.remaining ??
+                        (row as any).remainingQty ??
+                        (row.quantity !== undefined
+                          ? Math.max(0, Number(row.orderedQuantity ?? row.quantity ?? 0) - Number(row.grReceivedQty ?? (row as any).receivedQuantity ?? 0))
+                          : row.quantity)
+                      )}
+                    </TableCell>
                     <TableCell className="text-center font-bold text-[#3b82f6]">{formatCurrency(row.netamount)}</TableCell>
                   </TableRow>
                 ))}
                 {(!items || items.length === 0) && (
                    <TableRow>
-                     <TableCell colSpan={8} className="text-center py-6 text-gray-500">ບໍ່ມີລາຍການສິນຄ້າ</TableCell>
+                     <TableCell colSpan={9} className="text-center py-6 text-gray-500">ບໍ່ມີລາຍການສິນຄ້າ</TableCell>
                    </TableRow>
                 )}
               </TableBody>

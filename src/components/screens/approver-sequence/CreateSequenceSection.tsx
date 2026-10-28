@@ -221,7 +221,7 @@ export function CreateSequenceSection({
 
             {steps.map((step, idx) => (
               <FlowNode
-                key={step.id}
+                key={step.id || `step-${idx}`}
                 type="step"
                 stepNumber={idx + 1}
                 title={step.title || "ຍັງບໍ່ໄດ້ຕັ້ງຊື່ຂັ້ນຕອນ"}
