@@ -46,10 +46,29 @@ export const getSelectedApiUrl = () => getStoredUserData()?.selectedApiUrl
 export const getUser = () => getStoredUserData()?.user
 
 // 🚪 Logout function
-export const logout = () => {
+export const logout = async () => {
     if (typeof window === 'undefined') return
-    clearAuthCookies()
-    window.location.href = '/login'
+    try {
+        const token = getAuthToken()
+        const apiUrl = process.env.NEXT_PUBLIC_API || getSelectedApiUrl() || ""
+        const logoutEndpoint = process.env.NEXT_PUBLIC_LOGOUT || "/api/auth/logout"
+        if (apiUrl) {
+            const cleanBaseUrl = apiUrl.replace(/\/+$/, "")
+            const cleanEndpoint = logoutEndpoint.startsWith("/") ? logoutEndpoint : `/${logoutEndpoint}`
+            await fetch(`${cleanBaseUrl}${cleanEndpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                }
+            }).catch(() => {})
+        }
+    } catch {
+        // Ignore network errors during logout
+    } finally {
+        clearAuthCookies()
+        window.location.href = '/login'
+    }
 }
 
 // 🔍 Check authentication

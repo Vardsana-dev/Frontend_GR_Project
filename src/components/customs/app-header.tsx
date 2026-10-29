@@ -2,9 +2,10 @@
 "use client";
 
 import React from "react";
-import { Mail, User2, User, Info, LogOut, Search } from "lucide-react";
+import { Mail, User2, User, Info, LogOut, Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { useLogout } from "@/hooks/useLogout";
 import { usePathname } from "next/navigation";
 import { items } from "./app-sidebar";
 import {
@@ -15,11 +16,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components";
-import { logout } from "@/lib/auth";
 import { useRouter } from "next/navigation"
 
 export function AppHeader() {
   const { user } = useAuth();
+  const { logout: handleLogout, loading: isLoggingOut } = useLogout();
   const pathname = usePathname();
   const [isClient, setIsClient] = React.useState(false);
   const router = useRouter();
@@ -77,11 +78,16 @@ export function AppHeader() {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
-                className="text-red-500 focus:text-red-800"
-                onClick={logout}
+                className="text-red-500 focus:text-red-800 cursor-pointer"
+                disabled={isLoggingOut}
+                onClick={handleLogout}
               >
-                <LogOut className="w-4 h-4 mr-1 text-red-500" />
-                ອອກຈາກລະບົບ
+                {isLoggingOut ? (
+                  <Loader2 className="w-4 h-4 mr-1 text-red-500 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4 mr-1 text-red-500" />
+                )}
+                {isLoggingOut ? "ກຳລັງອອກ..." : "ອອກຈາກລະບົບ"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

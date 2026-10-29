@@ -1,9 +1,9 @@
 // @ts-nocheck
 "use client"
 
-import { User, Lock, LogOut } from 'lucide-react'
+import { User, Lock, LogOut, Loader2 } from 'lucide-react'
 import { Button } from '@/components'
-import { logout } from '@/lib/auth'
+import { useLogout } from '@/hooks/useLogout'
 
 const NAV_ITEMS = [
     { key: 'profile', label: 'ຂໍ້ມູນສ່ວນຕົວ', icon: User },
@@ -11,8 +11,10 @@ const NAV_ITEMS = [
 ]
 
 export default function SettingsSidebar({ activeTab, onTabChange, user }) {
+    const { logout: handleLogout, loading: isLoggingOut } = useLogout()
+
     const handleClick = (key) => {
-        if (key === 'logout') { logout(); return }
+        if (key === 'logout') { handleLogout(); return }
         onTabChange(key)
     }
 
@@ -30,17 +32,27 @@ export default function SettingsSidebar({ activeTab, onTabChange, user }) {
 
             {/* Nav */}
             <div className="w-full px-5 flex flex-col gap-2">
-                {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
-                    <Button
-                        key={key}
-                        variant={activeTab === key && key !== 'logout' ? 'default' : 'outline'}
-                        className="w-full justify-start gap-3"
-                        onClick={() => handleClick(key)}
-                    >
-                        <Icon className="w-4 h-4 shrink-0" />
-                        <span className="flex-1 text-left">{label}</span>
-                    </Button>
-                ))}
+                {NAV_ITEMS.map(({ key, label, icon: Icon }) => {
+                    const isLogout = key === 'logout'
+                    return (
+                        <Button
+                            key={key}
+                            variant={activeTab === key && !isLogout ? 'default' : 'outline'}
+                            className={`w-full justify-start gap-3 ${isLogout ? 'text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200' : ''}`}
+                            disabled={isLogout && isLoggingOut}
+                            onClick={() => handleClick(key)}
+                        >
+                            {isLogout && isLoggingOut ? (
+                                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                            ) : (
+                                <Icon className="w-4 h-4 shrink-0" />
+                            )}
+                            <span className="flex-1 text-left">
+                                {isLogout && isLoggingOut ? 'ກຳລັງອອກ...' : label}
+                            </span>
+                        </Button>
+                    )
+                })}
             </div>
         </div>
     )
