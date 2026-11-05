@@ -55,7 +55,7 @@ export function AddUserDialog({ open, onOpenChange, onSuccess }: AddUserDialogPr
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log("Form submitted:", values);
+    // ("Form submitted:", values);
     if (onSuccess) {
       onSuccess(values);
     }
@@ -168,11 +168,11 @@ export function AddUserDialog({ open, onOpenChange, onSuccess }: AddUserDialogPr
                     <FormLabel className="text-gray-700 font-semibold">ລະຫັດຜ່ານ</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Input 
-                          type={showPassword ? "text" : "password"} 
-                          placeholder="ປ້ອນລະຫັດຜ່ານ..." 
-                          className="h-12 bg-gray-50 rounded-xl pr-10" 
-                          {...field} 
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="ປ້ອນລະຫັດຜ່ານ..."
+                          className="h-12 bg-gray-50 rounded-xl pr-10"
+                          {...field}
                         />
                         <button
                           type="button"
@@ -214,16 +214,16 @@ export function AddUserDialog({ open, onOpenChange, onSuccess }: AddUserDialogPr
             </div>
 
             <div className="pt-6 border-t border-gray-100 flex justify-end gap-4">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 className="h-12 px-8 rounded-xl border-[#2a45a8] text-[#2a45a8] hover:bg-blue-50 bg-white font-semibold"
                 onClick={() => onOpenChange(false)}
               >
                 ຍົກເລີກ
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="h-12 px-8 rounded-xl bg-[#2a45a8] hover:bg-[#1e3a8a] text-white font-semibold"
               >
                 ບັນທຶກຜູ້ໃຊ້

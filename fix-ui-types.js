@@ -19,11 +19,11 @@ for (const file of files) {
   //   className,
   //   ...props
   // }: any) {
-  
+
   const newContent = content.replace(/(function\s+[A-Za-z0-9_]+\s*\(\s*\{[^}]*\}\s*)(\)\s*\{)/g, '$1: any$2');
-  
+
   if (content !== newContent) {
     fs.writeFileSync(filePath, newContent, 'utf8');
-    console.log(`Patched ${file}`);
+    // (`Patched ${file}`);
   }
 }

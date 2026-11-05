@@ -18,8 +18,8 @@ export default function UserSection() {
           ຜູ້ໃຊ້ງານທັງໝົດ
           <span className="text-gray-400 font-normal">(64)</span>
         </h1>
-        
-        <Button 
+
+        <Button
           onClick={() => setIsAddUserOpen(true)}
           className="h-10 bg-[#2a45a8] hover:bg-[#1e3a8a] text-white rounded-md flex items-center gap-2 px-6"
         >
@@ -30,11 +30,11 @@ export default function UserSection() {
 
       <UserTable data={MOCK_USER_DATA} />
 
-      <AddUserDialog 
-        open={isAddUserOpen} 
+      <AddUserDialog
+        open={isAddUserOpen}
         onOpenChange={setIsAddUserOpen}
         onSuccess={(data) => {
-          console.log("User successfully added:", data);
+          // ("User successfully added:", data);
           // Here you would typically trigger a data re-fetch
         }}
       />
