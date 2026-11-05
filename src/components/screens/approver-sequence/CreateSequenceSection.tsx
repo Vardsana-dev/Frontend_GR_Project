@@ -84,22 +84,22 @@ export function CreateSequenceSection({
   };
 
   const handleRemoveUser = async (stepId: string, usercode: string) => {
-    console.log("handleRemoveUser called", { stepId, usercode });
+    // ("handleRemoveUser called", { stepId, usercode });
     if (!isNaN(Number(stepId)) && usercode && !usercode.startsWith('dummy-')) {
       try {
         const removeRes = await removeUserFromLevel({ stepId: Number(stepId), usercode });
-        console.log("removeRes:", removeRes);
+        // ("removeRes:", removeRes);
         if (!removeRes.success) {
           setSaveError(`Failed to delete user: ${removeRes.error?.message || 'Unknown error'}`);
           return;
         }
       } catch (err: any) {
-        console.log("removeError:", err);
+        // ("removeError:", err);
         setSaveError(`Failed to delete user: ${err.message}`);
         return;
       }
     }
-    
+
     // Update local state
     setSteps(prev => prev.map(s => s.id === stepId ? {
       ...s,
