@@ -46,7 +46,11 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
   // Track dynamically added barcodes from AddBarcodeModal
   const [addedBarcodes, setAddedBarcodes] = useState<Record<string, string>>({});
 
+  // Track custom barcode quantities to print per item
+  const [customQuantities, setCustomQuantities] = useState<Record<string, number | ''>>({});
+
   // Print Configuration Settings
+  const [paperType, setPaperType] = useState<'roll' | 'a4'>('roll');
   const [columns, setColumns] = useState<2 | 3 | 4>(3);
   const [repeatByQuantity, setRepeatByQuantity] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -54,8 +58,40 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
   // Active items being sent to the print preview
   const [activePrintItems, setActivePrintItems] = useState<BarcodePrintItem[]>([]);
 
-  // Ref for the hidden A4 printable component
+  // Ref for the hidden printable component
   const printSheetRef = useRef<HTMLDivElement>(null);
+
+  // Handle custom quantity change for an item
+  const handleQuantityChange = (id: string, value: string) => {
+    if (value === '') {
+      setCustomQuantities((prev) => ({
+        ...prev,
+        [id]: '',
+      }));
+      return;
+    }
+    // Remove leading zeros (e.g. '05' -> '5')
+    const cleanVal = value.replace(/^0+(?=\d)/, '');
+    const num = parseInt(cleanVal, 10);
+    setCustomQuantities((prev) => ({
+      ...prev,
+      [id]: isNaN(num) ? '' : Math.max(0, num),
+    }));
+  };
+
+  // Toggle repeat by received quantity shortcut
+  const handleToggleRepeatByQuantity = () => {
+    const next = !repeatByQuantity;
+    setRepeatByQuantity(next);
+
+    const updatedQuantities: Record<string, number | ''> = {};
+    items.forEach((item: any, idx: number) => {
+      const id = String(item.sequence || idx + 1).padStart(2, '0');
+      const receivedQty = Number(item.quantities?.grReceivedQty ?? item.quantities?.received ?? item.qty ?? 0);
+      updatedQuantities[id] = next ? (receivedQty > 0 ? receivedQty : '') : '';
+    });
+    setCustomQuantities(updatedQuantities);
+  };
 
   // Save printed items to sessionStorage when updated
   useEffect(() => {
@@ -68,14 +104,72 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
     }
   }, [printedIds, grId]);
 
-  // Initialize react-to-print hook
-  const reactToPrintFn = useReactToPrint({
-    contentRef: printSheetRef,
-    documentTitle: `Barcode-Sheet-${grId || 'CSC'}`,
-    pageStyle: `
+  // Dynamic Page Style based on Paper Type:
+  // - 'roll': 100mm x 25mm label roll (3 stickers/row of 31x24mm) with 0 margin
+  // - 'a4': Standard A4 portrait sheet
+  const pageStyle = useMemo(() => {
+    if (paperType === 'roll') {
+      return `
+        @page {
+          size: 100mm 25mm;
+          margin: 0mm !important;
+        }
+        @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100mm !important;
+            height: auto !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            overflow: visible !important;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            box-sizing: border-box !important;
+          }
+          .roll-strip {
+            width: 100mm !important;
+            height: 25mm !important;
+            max-height: 25mm !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+          }
+          .roll-strip:last-child,
+          .roll-strip-last {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            page-break-after: auto !important;
+            break-after: auto !important;
+          }
+          .roll-label-card {
+            width: 32mm !important;
+            height: 25mm !important;
+            max-height: 25mm !important;
+            padding: 2.0mm 0.8mm 0.8mm 0.8mm !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+          }
+          .roll-label-card-first {
+            position: relative !important;
+            left: -1.2mm !important;
+          }
+        }
+      `;
+    }
+    return `
       @page {
         size: A4 portrait;
-        margin: 8mm 6mm;
+        margin: 0mm;
       }
       @media print {
         html, body {
@@ -89,7 +183,14 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
           print-color-adjust: exact !important;
         }
       }
-    `,
+    `;
+  }, [paperType]);
+
+  // Initialize react-to-print hook
+  const reactToPrintFn = useReactToPrint({
+    contentRef: printSheetRef,
+    documentTitle: `Barcode-${paperType === 'roll' ? 'Roll-100x25' : 'A4'}-${grId || 'CSC'}`,
+    pageStyle,
     onBeforePrint: async () => {
       setIsPrinting(true);
     },
@@ -121,9 +222,15 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
         const hasBarcode = Boolean(existingBarcode && existingBarcode !== '-');
         const barcodeVal = existingBarcode || (code !== '-' ? code : '');
 
-        const qty = Number(item.quantities?.grReceivedQty ?? item.quantities?.received ?? item.qty ?? 1);
+        const receivedQty = Number(item.quantities?.grReceivedQty ?? item.quantities?.received ?? item.qty ?? 1);
         const price = Number(item.pricing?.unitPrice ?? item.price ?? 0);
         const unit = item.quantities?.unitCode || item.unit || '';
+
+        // If user entered a custom barcode quantity, use it; otherwise default to 0
+        const customQty = customQuantities[id];
+        const qty = customQty !== undefined
+          ? (customQty === '' ? 0 : Number(customQty))
+          : 0;
 
         // Determine Status:
         // 1. If it was already printed -> SUCCESS ('ສຳເລັດ')
@@ -143,7 +250,8 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
           code,
           name,
           barcode: barcodeVal || code,
-          qty: qty > 0 ? qty : 1,
+          qty,
+          receivedQty,
           price,
           unit,
           hasBarcode,
@@ -151,7 +259,7 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
         };
       }) || []
     );
-  }, [items, addedBarcodes, printedIds]);
+  }, [items, addedBarcodes, printedIds, customQuantities]);
 
   // Filter items based on search input and status dropdown
   const filteredItems = useMemo(() => {
@@ -204,20 +312,23 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
       targets = filteredItems.length > 0 ? filteredItems : barcodeItems;
     }
 
-    if (targets.length === 0) {
+    // Filter to targets that have qty > 0
+    const printableTargets = targets.filter((item) => (Number(item.qty) || 0) > 0);
+
+    if (printableTargets.length === 0) {
       return;
     }
 
     // Mark the printed items as printed -> transitions their status to 'ສຳເລັດ'
-    const newlyPrintedIds = targets.map((t) => t.id);
+    const newlyPrintedIds = printableTargets.map((t) => t.id);
     setPrintedIds((prev) => Array.from(new Set([...prev, ...newlyPrintedIds])));
 
-    setActivePrintItems(targets);
+    setActivePrintItems(printableTargets);
 
     // Give DOM a brief moment to render SVGs in hidden container before opening print preview
     setTimeout(() => {
       reactToPrintFn();
-    }, 150);
+    }, 250);
   };
 
   // Render status badge matching the design in user image
@@ -276,38 +387,51 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
             </div>
 
             {/* Header Right: Print Options & Print Button */}
-            <div className="flex items-center gap-3">
-              {/* Columns Selector */}
-              <div className="hidden sm:flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Paper Type Selector */}
+              <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200">
                 <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500" />
-                <span className="text-xs font-bold text-gray-600">ຖັນ A4:</span>
+                <span className="text-xs font-bold text-gray-600">ເຈ້ຍ:</span>
                 <select
-                  value={columns}
-                  onChange={(e) => setColumns(Number(e.target.value) as 2 | 3 | 4)}
+                  value={paperType}
+                  onChange={(e) => setPaperType(e.target.value as 'roll' | 'a4')}
                   className="bg-transparent text-xs font-bold text-[#1e3a8a] outline-none cursor-pointer"
                 >
-                  <option value={3}>3 ຖັນ (24 ປ້າຍ/A4)</option>
-                  <option value={2}>2 ຖັນ (12 ປ້າຍ/A4)</option>
-                  <option value={4}>4 ຖັນ (40 ປ້າຍ/A4)</option>
+                  <option value="roll">ມ້ວນ 100x25mm (TSC)</option>
+                  <option value="a4">ເຈ້ຍ A4 (Sticker Sheet)</option>
                 </select>
               </div>
+
+              {/* Columns Selector (Only shown for A4) */}
+              {paperType === 'a4' && (
+                <div className="hidden sm:flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200">
+                  <span className="text-xs font-bold text-gray-600">ຖັນ A4:</span>
+                  <select
+                    value={columns}
+                    onChange={(e) => setColumns(Number(e.target.value) as 2 | 3 | 4)}
+                    className="bg-transparent text-xs font-bold text-[#1e3a8a] outline-none cursor-pointer"
+                  >
+                    <option value={3}>3 ຖັນ (24 ປ້າຍ/A4)</option>
+                    <option value={2}>2 ຖັນ (12 ປ້າຍ/A4)</option>
+                    <option value={4}>4 ຖັນ (40 ປ້າຍ/A4)</option>
+                  </select>
+                </div>
+              )}
 
               {/* Repeat by Received Qty Toggle */}
               <button
                 type="button"
-                onClick={() => setRepeatByQuantity(!repeatByQuantity)}
-                className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  repeatByQuantity
-                    ? 'bg-blue-50 border-blue-300 text-[#1e3a8a]'
-                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                }`}
+                onClick={handleToggleRepeatByQuantity}
+                className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${repeatByQuantity
+                  ? 'bg-blue-50 border-blue-300 text-[#1e3a8a]'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 <Layers className="w-3.5 h-3.5" />
                 <span>ພິມຕາມຈຳນວນຮັບ</span>
                 <div
-                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                    repeatByQuantity ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'
-                  }`}
+                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${repeatByQuantity ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'
+                    }`}
                 >
                   {repeatByQuantity && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                 </div>
@@ -387,11 +511,10 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
                       <div className="flex items-center gap-3">
                         <div
                           onClick={toggleSelectAll}
-                          className={`w-[18px] h-[18px] rounded flex items-center justify-center cursor-pointer border-[1.5px] transition-colors ${
-                            selectedIds.length === filteredItems.length && filteredItems.length > 0
-                              ? 'bg-[#2563eb] border-[#2563eb]'
-                              : 'border-blue-200 bg-white hover:border-blue-400'
-                          }`}
+                          className={`w-[18px] h-[18px] rounded flex items-center justify-center cursor-pointer border-[1.5px] transition-colors ${selectedIds.length === filteredItems.length && filteredItems.length > 0
+                            ? 'bg-[#2563eb] border-[#2563eb]'
+                            : 'border-blue-200 bg-white hover:border-blue-400'
+                            }`}
                         >
                           {selectedIds.length === filteredItems.length && filteredItems.length > 0 && (
                             <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
@@ -412,8 +535,8 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
                     <TableHead className="w-[130px] bg-transparent text-gray-500 font-bold text-[13px] text-center">
                       ສະຖານະການພິມ
                     </TableHead>
-                    <TableHead className="w-[90px] bg-transparent text-gray-500 font-bold text-[13px] text-center pr-6">
-                      ຈັດການ
+                    <TableHead className="w-[180px] bg-transparent text-gray-500 font-bold text-[13px] text-center pr-6">
+                      ປ້ອນຈຳນວນບາໂຄດ
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -431,11 +554,10 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
                           <div className="flex items-center gap-3">
                             <div
                               onClick={() => toggleSelect(item.id)}
-                              className={`w-[18px] h-[18px] rounded flex items-center justify-center cursor-pointer border-[1.5px] transition-colors ${
-                                selectedIds.includes(item.id)
-                                  ? 'bg-[#2563eb] border-[#2563eb]'
-                                  : 'border-blue-200 bg-white hover:border-blue-400'
-                              }`}
+                              className={`w-[18px] h-[18px] rounded flex items-center justify-center cursor-pointer border-[1.5px] transition-colors ${selectedIds.includes(item.id)
+                                ? 'bg-[#2563eb] border-[#2563eb]'
+                                : 'border-blue-200 bg-white hover:border-blue-400'
+                                }`}
                             >
                               {selectedIds.includes(item.id) && (
                                 <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
@@ -451,24 +573,39 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
                           {item.name}
                         </TableCell>
                         <TableCell className="font-bold text-gray-900 text-[13px] text-center">
-                          {item.qty} {item.unit && <span className="text-gray-400 font-normal text-xs">{item.unit}</span>}
+                          {item.receivedQty} {item.unit && <span className="text-gray-400 font-normal text-xs">{item.unit}</span>}
                         </TableCell>
                         <TableCell className="text-center">
                           {renderBadge(item.status)}
                         </TableCell>
                         <TableCell className="text-center pr-6">
-                          {/* Exactly matches Image: ONLY show 'ເພີ່ມ' button when status is 'NO_BARCODE' */}
-                          {item.status === 'NO_BARCODE' ? (
-                            <Button
-                              onClick={() => {
-                                setSelectedProduct({ code: item.code, name: item.name, unitcode: item.unit });
-                                setIsAddBarcodeOpen(true);
-                              }}
-                              className="h-8 px-4 bg-[#2563eb] hover:bg-blue-700 text-white font-bold rounded-lg text-[12px] shadow-sm cursor-pointer"
-                            >
-                              ເພີ່ມ
-                            </Button>
-                          ) : null}
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={customQuantities[item.id] !== undefined ? customQuantities[item.id] : ''}
+                              onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                              onFocus={(e) => e.target.select()}
+                              className="w-16 h-9 text-center font-bold text-gray-800 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-blue-500 text-[13px] shadow-sm placeholder:text-gray-400 placeholder:font-normal"
+                              placeholder="0"
+                            />
+                            <span className="text-[12px] font-semibold text-gray-500 select-none">
+                              ປ້າຍ
+                            </span>
+
+                            {item.status === 'NO_BARCODE' && (
+                              <Button
+                                onClick={() => {
+                                  setSelectedProduct({ code: item.code, name: item.name, unitcode: item.unit });
+                                  setIsAddBarcodeOpen(true);
+                                }}
+                                className="h-8 px-2.5 bg-[#2563eb] hover:bg-blue-700 text-white font-bold rounded-lg text-[11px] shadow-sm cursor-pointer shrink-0 ml-1"
+                                title="ເພີ່ມບາໂຄດ"
+                              >
+                                ເພີ່ມ
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -493,13 +630,13 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
         </div>
       </DialogContent>
 
-      {/* Hidden A4 Print Container: Dedicated for react-to-print */}
+      {/* Hidden Print Container: Dedicated for react-to-print */}
       <div
         style={{
           position: 'fixed',
           left: '-99999px',
           top: 0,
-          width: '210mm',
+          width: paperType === 'roll' ? '100mm' : '210mm',
           opacity: 0,
           pointerEvents: 'none',
         }}
@@ -508,9 +645,10 @@ export function PrintBarcodeModal({ isOpen, onClose, grId, items = [] }: PrintBa
         <A4BarcodeSheet
           ref={printSheetRef}
           items={printableItemsForSheet}
+          paperType={paperType}
           columns={columns}
           repeatByQuantity={repeatByQuantity}
-          showPrice={true}
+          showPrice={false}
           title={grId ? `GR: ${grId}` : ''}
         />
       </div>
